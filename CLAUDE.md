@@ -155,15 +155,61 @@ python -m http.server 8080   # index.html + pkg/ を配信
   表示・新規追加・不正ポート入力の拒否・サイト選択によるアクティブ切替・
   接続テストボタン・削除確認ダイアログ(キャンセル/実行の両方)・JSON
   エクスポート/インポートのラウンドトリップ。console上のJSエラーは無し
-  (意図した接続失敗ログのみ)。`certbot`/`systemctl` を伴う実際のTLS取得・
-  自動更新は、実サーバー環境が無いためスクリプトの構文・ロジック確認のみ
-  (実運用環境での動作確認は引き続き未実施)。
+  (意図した接続失敗ログのみ)。
+- **vhost/TLS周りの実サーバー検証(今回のパスで実施)**: このセッションの
+  コンテナに実際に Nginx 1.24(Ubuntu 24.04標準)・Apache 2.4・certbot を
+  導入し、`scripts/gen-vhost.sh` の生成物を自己署名証明書と組み合わせて
+  `nginx -t` / `apache2ctl configtest` で実構文検証 → 両方とも実際に
+  起動して `curl` で機能検証(HTTP→HTTPSリダイレクト、ACME challengeパスは
+  リダイレクト対象外、HTTPS配信、`/graphql`へのリバースプロキシで
+  502/503が正しく返る)まで確認。この過程で**実バグを発見・修正**:
+  `deploy/nginx/vhost.conf.template` の `listen ... ssl; http2 on;`
+  (Nginx 1.25.1+ 専用の新記法)が Ubuntu 24.04 標準の Nginx 1.24 では
+  `unknown directive "http2"` で起動失敗することが判明したため、
+  旧来互換の `listen ... ssl http2;` 記法に修正。`scripts/check-tls.sh`も
+  実際に起動したHTTPSサーバー(自己署名証明書)に対して実行し、
+  WARN/healthy/ERRORの3状態すべてが正しく動作することを確認。
+  `deploy/systemd/*.service`・`*.timer`(monitor含む)は
+  `systemd-analyze verify` で全てエラー0件。
+  一方、**実際の certbot による Let's Encrypt 発行は未検証のまま**:
+  (1) 実際のパブリックドメイン・外部到達可能なIPが無いため ACME HTTP-01
+  チャレンジ自体を検証できない、(2) このコンテナの `/usr/bin/python3`
+  (3.11、pyenv等の別ビルド)と apt版 `python3-cffi`(cpython-312向け
+  ビルド)のABI不一致により、apt版certbotバイナリ自体が起動時に
+  `ModuleNotFoundError: No module named '_cffi_backend'` で落ちる
+  (このコンテナ環境固有の問題で、本リポジトリのスクリプトの不具合ではない)。
+  次回、実際にパブリックドメイン+到達可能なサーバーで再検証すること。
 - README(ルート、英語以下9言語)は全て最新の機能セット(サイト管理・
   IPアドレス起動・HTTPS自動化・SQLクエリ履歴/CSV/ショートカット)に同期
   済み。コードブロック(コマンド・パス・URL・ライセンス識別子)は各言語版
   でも翻訳せず原文のまま。
 
 ## HANDOFF(直近の自動巡回ログ、上が最新)
+
+- **2026-07-11(5回目パス)**: 前回パスの持ち越し事項「実サーバー環境で
+  scripts/setup-tls.sh・install-systemd-units.sh の実動作を確認」に対応。
+  このセッションのコンテナに Nginx 1.24・Apache 2.4・certbot を実際に
+  導入し、`scripts/gen-vhost.sh` の生成物を自己署名証明書で `nginx -t`/
+  `apache2ctl configtest` → 実起動 → `curl` での機能検証(HTTP→HTTPS
+  リダイレクト、ACME challengeパス、`/graphql`リバースプロキシ)まで実施。
+  **この検証で `deploy/nginx/vhost.conf.template` の実バグを発見・修正**
+  (`http2 on;` がNginx 1.24で `unknown directive` エラーになるため、
+  旧来互換の `listen ... ssl http2;` に修正)。`scripts/check-tls.sh` も
+  実際に起動したHTTPSサーバーに対してWARN/healthy/ERRORの3状態を実行
+  確認。`deploy/systemd/*` は `systemd-analyze verify` でエラー0件。
+  一方、実際の certbot による Let's Encrypt 発行(ACME HTTP-01)は、
+  (1) パブリックドメイン・外部到達可能なIPがこのセッションには無い、
+  (2) このコンテナの `/usr/bin/python3` と apt版 `python3-cffi` の
+  ABI不一致で apt版certbotバイナリ自体が起動できない、という2つの
+  コンテナ固有の制約により検証できなかった(本リポジトリのスクリプトの
+  不具合ではない)。詳細は上記「現状」参照。
+  **次回パスがすべきこと**: (1) 実際にパブリックドメイン+外部到達可能な
+  サーバー環境がある場合、`scripts/setup-tls.sh` での実際のLet's
+  Encrypt発行を確認、(2) 価値があれば `branches`/`log`/`diff` など他の
+  VcsQueryクエリ、または `registry`(DB一覧)クエリの追加UIを検討(ただし
+  aruaru-db側の実スキーマを確認できる場合のみ実装し、推測でのフィールド
+  追加は避ける — このセッションでは `aruaru-db` リポジトリへのアクセスが
+  スコープ外のため、ユーザーに実施可否を確認すること)。
 
 - **2026-07-11(4回目パス)**: 「より使いやすさ・完成度・実用性の見直し」
   という要望を受けて実装。(1) 使いやすさ/実用性の追加改善: `dom.rs` に
