@@ -23,6 +23,12 @@ KUSANAGIのサイト一覧のように**複数の接続先(aruaru-web用・他�
     テーブル表示
   - `registrySummary: RegistrySummaryGql` — 対応DBレジストリ(150件超)の集計を
     カード表示
+  - `registry: [DbEntryGql!]!` — 対応DBレジストリの**一覧**をテーブル表示
+    (名前/カテゴリ/ワイヤー互換/状態/順位/スコア/更新日時)
+- **バージョン管理タブ**: `currentBranch`/`branches`(ブランチ一覧・現在の
+  ブランチ)、`log(limit)`(コミットログ)、`diff(from, to)`(ブランチ間差分の
+  追加/削除/変更件数)を実行できる。いずれも `aruaru-db/crates/aruaru-graphql`
+  の実スキーマ(`VcsQuery`)に基づく。
 - `aruaru-server` が起動していない/接続できない場合は、**実スキーマと同じ形の
   サンプルデータ**をその場で描画し、「オフラインサンプル」である旨を明示する
   (この挙動は実ブラウザで検証済み — 下記「動作確認」参照)。
@@ -120,11 +126,21 @@ sudo deploy/systemd/install-systemd-units.sh
   実ブラウザ(Chromium、Playwright経由)で `index.html` を読み込み、以下を実際に
   操作して確認済み: タブ切替、SQL実行→オフラインフォールバック描画、クエリ
   履歴への記録・再読込・ホバー時のツールチップ、Ctrl+Enterショートカット、
-  CSVエクスポート(実ダウンロード発火)、レジストリ集計、サイト管理タブでの
-  登録済みサイト表示・新規追加・不正ポート入力の拒否・接続テストボタン・
-  JSONエクスポート/インポート(ラウンドトリップ確認済み)・削除確認ダイアログ
-  (キャンセル/実行の両方)。console上のJSエラーは無し(意図した接続失敗
-  ログのみ)。
+  CSVエクスポート(実ダウンロード発火)、レジストリ集計・登録DB一覧の取得、
+  バージョン管理タブでのブランチ一覧・コミットログ・Diff取得(いずれも
+  オフラインフォールバック含む)、サイト管理タブでの登録済みサイト表示・
+  新規追加・不正ポート入力の拒否・接続テストボタン・JSONエクスポート/
+  インポート(ラウンドトリップ確認済み)・削除確認ダイアログ(キャンセル/
+  実行の両方)。console上のJSエラーは無し(意図した接続失敗ログのみ)。
+- Nginx 1.24(Ubuntu 24.04標準)・Apache 2.4・certbotを実際に導入し、
+  `scripts/gen-vhost.sh` の生成物を自己署名証明書で実起動・`curl` 検証
+  (HTTP→HTTPSリダイレクト、ACME challengeパス、`/graphql`リバースプロキシ)、
+  `scripts/check-tls.sh` を実際のHTTPSサーバーに対して実行してWARN/healthy/
+  ERRORの3状態を確認、`deploy/systemd/*` を `systemd-analyze verify` で検証
+  (エラー0件)。この過程で Nginx vhost テンプレートの実バグ(`http2 on;` が
+  Nginx 1.24で構文エラーになる)を発見・修正済み。実際のcertbotによる
+  Let's Encrypt発行(ACME認証)は、パブリックドメインが無いことと検証環境
+  のPython ABI不一致により未検証(詳細はCLAUDE.md参照)。
 
 ## 構成
 

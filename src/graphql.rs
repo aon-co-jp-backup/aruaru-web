@@ -9,6 +9,13 @@ use web_sys::{Request, RequestInit, RequestMode, Response};
 pub const SQL_QUERY: &str = "query($sql: String!) { sql(query: $sql) { columns rows commandTag } }";
 pub const REGISTRY_SUMMARY_QUERY: &str =
     "{ registrySummary { total connectable ga beta pgCompatible planned } }";
+pub const REGISTRY_LIST_QUERY: &str =
+    "{ registry { id name category wire status rank score updatedAt } }";
+pub const BRANCHES_QUERY: &str =
+    "{ currentBranch branches { name headCommitId isCurrent } }";
+pub const LOG_QUERY: &str =
+    "query($limit: Int) { log(limit: $limit) { id shortId author message timestamp rootHash } }";
+pub const DIFF_QUERY: &str = "query($from: String!, $to: String!) { diff(from: $from, to: $to) { fromCommit toCommit added removed modified } }";
 
 /// `data.<field>` を取り出す。GraphQL の `errors` があれば読みやすい形にする。
 pub fn extract_data(body: &serde_json::Value, field: &str) -> Result<serde_json::Value, String> {

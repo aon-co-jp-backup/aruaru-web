@@ -104,9 +104,19 @@ python -m http.server 8080   # index.html + pkg/ を配信
   依存は `wasm-bindgen`/`wasm-bindgen-futures`/`js-sys`/`web-sys`/`serde`/
   `serde_json` のみ。重量級フレームワーク無し。
 - 実装済み機能:
-  - タブ式UI(SQL実行 / レジストリ集計 / サイト管理)。`aruaru-graphql`
-    `/graphql` への実 `fetch()`(`sql`/`registrySummary` クエリ)、接続失敗時は
+  - タブ式UI(SQL実行 / バージョン管理 / レジストリ集計 / サイト管理)。
+    `aruaru-graphql` `/graphql` への実 `fetch()`(`sql`/`registrySummary`/
+    `registry`/`currentBranch`/`branches`/`log`/`diff` クエリ)、接続失敗時は
     実スキーマと同形のオフラインサンプルをレンダリングしてその旨を明示。
+  - **バージョン管理タブ**: `aruaru-db/crates/aruaru-graphql/src/lib.rs` の
+    `VcsQuery` 実スキーマ(推測ではなく実ソースを確認して実装)に基づき、
+    ブランチ一覧(`branches`/`currentBranch`)・コミットログ(`log(limit)`)・
+    ブランチ間Diff(`diff(from, to)`、追加/削除/変更件数)を取得できる。
+  - **レジストリ集計タブ**: `registrySummary`(カード表示)に加え、
+    `AdminQuery::registry`(`aruaru-db/crates/aruaru-graphql/src/
+    admin_resolvers.rs` の実スキーマ)による**登録DB一覧**(名前/カテゴリ/
+    ワイヤー互換/状態/順位/スコア/更新日時)をテーブル表示・CSVエクスポート
+    できる。
   - **サイト管理タブ**(`src/profiles.rs`): aruaru-web用・他プロジェクト用の
     接続先(名前/用途/プロトコル/ホスト(IP・ドメイン・サブドメイン)/ポート/
     パス/バックエンドスタック名)を複数登録・編集・削除でき、`localStorage`
@@ -185,6 +195,32 @@ python -m http.server 8080   # index.html + pkg/ を配信
   でも翻訳せず原文のまま。
 
 ## HANDOFF(直近の自動巡回ログ、上が最新)
+
+- **2026-07-11(6回目パス)**: 前回パスのもう一つの持ち越し事項「他の
+  VcsQueryクエリ、またはregistry(DB一覧)クエリの追加UI」に対応。
+  推測でのフィールド追加を避けるため、ユーザーに確認の上で `aruaru-db`
+  リポジトリをこのセッションに読み取り専用で追加(`add_repo` →
+  `/workspace/aruaru-db`、**このリポジトリへの変更は一切行っていない**)、
+  `crates/aruaru-graphql/src/lib.rs`(`VcsQuery`)・`admin_resolvers.rs`/
+  `admin_types.rs`(`AdminQuery::registry`)の実ソースを直接確認して
+  実装。新設: 「バージョン管理」タブ(`branches`/`currentBranch`・
+  `log(limit)`・`diff(from, to)`)、「レジストリ集計」タブへの
+  「登録DB一覧を取得」ボタン(`registry` クエリ、CSVエクスポート対応)。
+  `render.rs` に共通テーブル描画ヘルパー `render_table` を追加し
+  `render_query_result` 含む全テーブル系表示で共用(重複削減、CSV
+  エクスポートが自動的に全テーブルで使えるようになった)。
+  `cargo build`/`cargo clippy`(`--target wasm32-unknown-unknown`)は
+  警告0件。`wasm-bindgen` → Playwright(Chromium)で新タブの全ボタン
+  (ブランチ一覧・ログ・Diff・登録DB一覧)を実クリックし、オフライン
+  フォールバックの正常動作・Diffのfrom/to未入力時のバリデーションまで
+  確認済み。GraphQL Mutation(`createBranch`/`checkout`/`merge`等)や
+  バックアップ・クラスタ・マイグレーション・並列実行・フェデレーション系の
+  AdminQuery/AdminMutationは今回スコープ外(過剰なスコープ拡大を避けるため、
+  ユーザーから要望のあった範囲=VcsQuery抜粋+registry一覧のみに限定)。
+  **次回パスがすべきこと**: (1) 実際にパブリックドメイン+外部到達可能な
+  サーバー環境がある場合、`scripts/setup-tls.sh` での実際のLet's
+  Encrypt発行を確認、(2) 価値があれば、ユーザー確認の上でバックアップ/
+  クラスタ状態など他のAdminQueryの追加UIを検討(同様に実スキーマ確認必須)。
 
 - **2026-07-11(5回目パス)**: 前回パスの持ち越し事項「実サーバー環境で
   scripts/setup-tls.sh・install-systemd-units.sh の実動作を確認」に対応。
