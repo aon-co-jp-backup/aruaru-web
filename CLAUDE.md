@@ -98,21 +98,74 @@ python -m http.server 8080   # index.html + pkg/ を配信
 ## 現状(このリポジトリ固有)
 
 - 2026-07-11 に本リポジトリを空の状態からブートストラップ(初回コミット)。
-- 単一クレート構成(`Cargo.toml` + `src/lib.rs`、workspaceではなく単体crate)。
-  `crate-type = ["cdylib", "rlib"]`、依存は `wasm-bindgen`/`wasm-bindgen-futures`/
-  `js-sys`/`web-sys`/`serde`/`serde_json` のみ。重量級フレームワーク無し。
-- 実装済み機能: SQL入力欄からの `aruaru-graphql` `/graphql` への実
-  `fetch()`(`sql`/`registrySummary` クエリ)、接続失敗時は実スキーマと
-  同形のオフラインサンプルをレンダリングしてその旨を明示。
-- `cargo check --target wasm32-unknown-unknown` / `cargo build --target
-  wasm32-unknown-unknown` ともに警告0件で成功。`wasm-bindgen-cli 0.2.126`
-  (Cargo.lockの`wasm-bindgen`バージョンと一致)で `pkg/` を生成し、実
-  Chromiumブラウザで起動ログ・DOM構築・両ボタンのクリック→実`fetch()`→
-  オフラインサンプル描画までを確認済み。
+- 単一クレート構成(`Cargo.toml`、`src/` は複数モジュールに分割:
+  `lib.rs`/`dom.rs`/`graphql.rs`/`render.rs`/`profiles.rs`/`shell.rs`。
+  workspaceではなく単体crate)。`crate-type = ["cdylib", "rlib"]`、依存は
+  `wasm-bindgen`/`wasm-bindgen-futures`/`js-sys`/`web-sys`/`serde`/`serde_json`
+  のみ。重量級フレームワーク無し。
+- 実装済み機能:
+  - タブ式UI(SQL実行 / レジストリ集計 / サイト管理)。`aruaru-graphql`
+    `/graphql` への実 `fetch()`(`sql`/`registrySummary` クエリ)、接続失敗時は
+    実スキーマと同形のオフラインサンプルをレンダリングしてその旨を明示。
+  - **サイト管理タブ**(`src/profiles.rs`): aruaru-web用・他プロジェクト用の
+    接続先(名前/用途/プロトコル/ホスト(IP・ドメイン・サブドメイン)/ポート/
+    パス/バックエンドスタック名)を複数登録・編集・削除でき、`localStorage`
+    (`aruaru_web_site_profiles_v1`)に保存、選択中のサイトがSQL/レジストリ
+    タブのエンドポイントに自動反映される。KUSANAGIのサイト一覧に相当する
+    最小限の管理UIで、実際のDNS登録は行わない。
+  - **IPアドレスからの起動**: `scripts/serve.sh <BIND_IP> <PORT>` でローカル
+    開発サーバーを任意のIP/ポートにbind。
+  - **vhost生成・HTTPS自動設定**: `scripts/gen-vhost.sh <DOMAIN> <IP>
+    <UPSTREAM> [WEBROOT]` で Nginx/Apache の vhost(HTTP→HTTPSリダイレクト、
+    ACME challenge許可込み、`deploy/nginx|apache/vhost.conf.template` から
+    生成、出力は `.gitignore` 対象の `deploy/generated/`)を作成し、対象
+    ドメインを `deploy/generated/domains.txt` に記録する。
+  - **HTTPS自動監視・自動更新**: `scripts/setup-tls.sh` で certbot による
+    Let's Encrypt証明書取得、`scripts/check-tls.sh`/`check-all-tls.sh` で
+    有効期限監視、`deploy/systemd/install-systemd-units.sh` で
+    `aruaru-tls-renew.timer`(1日2回、`certbot renew` + webサーバーreload)と
+    `aruaru-tls-monitor.timer`(1日1回、登録済み全ドメインの失効監視)を
+    有効化する。実際のドメイン取得・DNSレコード登録(レジストラ操作)は
+    ここでは行わない(利用者が別途実施する前提)。
+- `cargo build --target wasm32-unknown-unknown` / `cargo clippy --target
+  wasm32-unknown-unknown` ともに警告0件で成功(このパスで確認済み)。
+  `scripts/gen-vhost.sh` は実際に実行し、生成された `.nginx.conf`/
+  `.apache.conf`/`domains.txt` の中身を目視確認済み。全シェルスクリプトは
+  `bash -n` で構文検証済み。
 - `todo!()`/`unimplemented!()`/TODO/FIXMEマーカーは0件(実装した範囲は
   スタブなしで完結)。
+- **未実施(次回パスへの持ち越し)**: `wasm-bindgen-cli` のインストールに
+  時間がかかるため今回のパスでは中断し、`wasm-bindgen` による `pkg/` 生成と
+  実ブラウザでの動作確認(新しいタブUI・サイト管理フォームの実クリック)は
+  実施できていない。次回パスの最優先事項とする。
+  `certbot`/`systemctl` を伴う実際のTLS取得・自動更新も、実サーバー環境が
+  無いためスクリプトの構文・ロジック確認のみ(実運用環境での動作確認は未実施)。
 
 ## HANDOFF(直近の自動巡回ログ、上が最新)
+
+- **2026-07-11(2回目パス)**: ユーザーからの要望「使い勝手向上・複数サイト
+  (aruaru-web用/他用途用)の接続先管理を簡単に・IPアドレスからの起動・
+  HTTPSの自動監視/自動設定/自動更新」を受けて実装。
+  `src/lib.rs` を `dom.rs`/`graphql.rs`/`render.rs`/`profiles.rs`/`shell.rs`
+  に分割し、タブ式UI(SQL実行/レジストリ集計/サイト管理)へ刷新。
+  `profiles.rs` に `localStorage` ベースの接続プロファイル管理(KUSANAGIの
+  サイト一覧相当)を実装。`scripts/serve.sh`(IP指定起動)、
+  `scripts/gen-vhost.sh` + `deploy/{nginx,apache}/vhost.conf.template`
+  (ドメイン/IP/アップストリームからvhost生成、HTTP→HTTPSリダイレクト込み)、
+  `scripts/setup-tls.sh`(certbotでのLet's Encrypt取得)、
+  `scripts/check-tls.sh`/`check-all-tls.sh`(有効期限監視)、
+  `deploy/systemd/`(`aruaru-tls-renew.timer` = 自動更新、
+  `aruaru-tls-monitor.timer` = 自動監視、`install-systemd-units.sh` で導入)
+  を新設。実際のドメイン取得・DNS登録はスコープ外である旨をREADME・
+  スクリプトのコメント双方に明記(ユーザーへも確認済み)。
+  `cargo build`/`cargo clippy`(both `--target wasm32-unknown-unknown`)は
+  警告0件。`scripts/gen-vhost.sh` の実行結果は目視確認済み。
+  **次回パスがすべきこと**: (1) `wasm-bindgen-cli 0.2.126` を導入して
+  `pkg/` を生成し、実Chromiumブラウザで新タブUI(サイト追加・編集・削除・
+  選択→エンドポイント欄への反映)を実際にクリックして検証、(2) 可能なら
+  実サーバー環境で `scripts/setup-tls.sh`/`install-systemd-units.sh` の
+  実動作(certbot取得・タイマー起動)を確認、(3) README以外の8言語版
+  README(English以降)は今回未更新のため、必要なら同様に更新する。
 
 - **2026-07-11(今回・初回パス)**: 空リポジトリからブートストラップ。
   `aruaru-db/crates/aruaru-graphql`(async-graphql、Federation サブグラフ、
