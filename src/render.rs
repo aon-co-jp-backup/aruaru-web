@@ -1,9 +1,83 @@
 //! SQL 実行結果 / レジストリ集計のレンダリング。
 
-use crate::dom::{by_id, esc};
+use crate::dom::{by_id, esc, try_by_id};
+use std::cell::RefCell;
+use wasm_bindgen::JsCast;
+
+type QueryResult = (Vec<String>, Vec<Vec<String>>);
+
+thread_local! {
+    static LAST_RESULT: RefCell<Option<QueryResult>> = const { RefCell::new(None) };
+}
 
 pub fn set_result_html(html: &str) {
     by_id("result").set_inner_html(html);
+}
+
+fn set_export_enabled(enabled: bool) {
+    if let Some(el) = try_by_id("export-csv") {
+        if let Ok(btn) = el.dyn_into::<web_sys::HtmlButtonElement>() {
+            btn.set_disabled(!enabled);
+        }
+    }
+}
+
+/// 直近のSQL実行結果をCSV文字列として取り出す(エクスポートボタン用)。
+pub fn last_result_as_csv() -> Option<String> {
+    LAST_RESULT.with(|cell| {
+        cell.borrow().as_ref().map(|(columns, rows)| {
+            let mut csv = String::new();
+            csv.push_str(&csv_row(columns));
+            csv.push('\n');
+            for row in rows {
+                csv.push_str(&csv_row(row));
+                csv.push('\n');
+            }
+            csv
+        })
+    })
+}
+
+fn csv_row(fields: &[String]) -> String {
+    fields
+        .iter()
+        .map(|f| format!("\"{}\"", f.replace('"', "\"\"")))
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+/// 直近のSQL実行結果をCSVファイルとしてダウンロードする。
+pub fn download_csv() {
+    let Some(csv) = last_result_as_csv() else {
+        return;
+    };
+    if download_csv_inner(&csv).is_none() {
+        crate::dom::set_status("CSVのダウンロードに失敗しました。");
+    }
+}
+
+fn download_csv_inner(csv: &str) -> Option<()> {
+    use js_sys::Array;
+    use web_sys::{Blob, BlobPropertyBag, Url};
+
+    let parts = Array::new();
+    parts.push(&wasm_bindgen::JsValue::from_str(csv));
+    let props = BlobPropertyBag::new();
+    props.set_type("text/csv;charset=utf-8;");
+    let blob = Blob::new_with_str_sequence_and_options(&parts, &props).ok()?;
+    let url = Url::create_object_url_with_blob(&blob).ok()?;
+
+    let document = crate::dom::document();
+    let anchor = document
+        .create_element("a")
+        .ok()?
+        .dyn_into::<web_sys::HtmlAnchorElement>()
+        .ok()?;
+    anchor.set_href(&url);
+    anchor.set_download("aruaru-web-result.csv");
+    anchor.click();
+    Url::revoke_object_url(&url).ok();
+    Some(())
 }
 
 /// `QueryResultGql { columns, rows, commandTag }` をテーブルとして描画する。
@@ -43,7 +117,12 @@ pub fn render_query_result(data: &serde_json::Value, offline: bool) {
     if columns.is_empty() && rows.is_empty() {
         html.push_str("<p class=\"muted\">結果はありません(0行)。</p>");
     } else {
-        html.push_str("<table><thead><tr>");
+        html.push_str(&format!(
+            "<p class=\"tag\">{} 行 &times; {} 列</p>",
+            rows.len(),
+            columns.len()
+        ));
+        html.push_str("<div class=\"table-scroll\"><table><thead><tr>");
         for c in &columns {
             html.push_str(&format!("<th>{}</th>", esc(c)));
         }
@@ -55,9 +134,13 @@ pub fn render_query_result(data: &serde_json::Value, offline: bool) {
             }
             html.push_str("</tr>");
         }
-        html.push_str("</tbody></table>");
+        html.push_str("</tbody></table></div>");
     }
     set_result_html(&html);
+
+    let has_rows = !rows.is_empty();
+    LAST_RESULT.with(|cell| *cell.borrow_mut() = Some((columns, rows)));
+    set_export_enabled(has_rows);
 }
 
 /// `RegistrySummaryGql` を簡易カード表示する。
@@ -84,6 +167,9 @@ pub fn render_registry_summary(data: &serde_json::Value, offline: bool) {
     }
     html.push_str("</dl>");
     set_result_html(&html);
+
+    LAST_RESULT.with(|cell| *cell.borrow_mut() = None);
+    set_export_enabled(false);
 }
 
 fn offline_banner() -> &'static str {

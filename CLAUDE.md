@@ -112,7 +112,14 @@ python -m http.server 8080   # index.html + pkg/ を配信
     パス/バックエンドスタック名)を複数登録・編集・削除でき、`localStorage`
     (`aruaru_web_site_profiles_v1`)に保存、選択中のサイトがSQL/レジストリ
     タブのエンドポイントに自動反映される。KUSANAGIのサイト一覧に相当する
-    最小限の管理UIで、実際のDNS登録は行わない。
+    最小限の管理UIで、実際のDNS登録は行わない。カードごとに**「接続テスト」
+    ボタン**(アクティブなサイトを変えずに疎通確認のみ実行)、ポート番号の
+    入力検証(1〜65535以外は保存を拒否しエラー表示)を実装。
+  - **SQLタブの実用性向上**: 直近10件の**クエリ履歴**(`src/history.rs`、
+    `localStorage`保存、クリックで再読込)、**Ctrl+Enter / Cmd+Enterでの
+    実行ショートカット**、実行結果の**CSVエクスポート**(`Blob`+`Url`+
+    `<a download>`)、実行中はボタンを無効化してラベルを「実行中…」に変更、
+    結果テーブルは行数表示・スクロール可能・ヘッダー固定(sticky)。
   - **IPアドレスからの起動**: `scripts/serve.sh <BIND_IP> <PORT>` でローカル
     開発サーバーを任意のIP/ポートにbind。
   - **vhost生成・HTTPS自動設定**: `scripts/gen-vhost.sh <DOMAIN> <IP>
@@ -134,14 +141,37 @@ python -m http.server 8080   # index.html + pkg/ を配信
   `bash -n` で構文検証済み。
 - `todo!()`/`unimplemented!()`/TODO/FIXMEマーカーは0件(実装した範囲は
   スタブなしで完結)。
-- **未実施(次回パスへの持ち越し)**: `wasm-bindgen-cli` のインストールに
-  時間がかかるため今回のパスでは中断し、`wasm-bindgen` による `pkg/` 生成と
-  実ブラウザでの動作確認(新しいタブUI・サイト管理フォームの実クリック)は
-  実施できていない。次回パスの最優先事項とする。
-  `certbot`/`systemctl` を伴う実際のTLS取得・自動更新も、実サーバー環境が
-  無いためスクリプトの構文・ロジック確認のみ(実運用環境での動作確認は未実施)。
+- `wasm-bindgen-cli 0.2.126` を導入して `pkg/` を生成し、実Chromium
+  (Playwright)で `index.html` を開き、以下を実クリック/実操作で確認済み:
+  タブ切替、SQL実行→オフラインフォールバック描画、クエリ履歴への記録と
+  再読込、Ctrl+Enterショートカット、CSVエクスポート(実ダウンロード発火)、
+  レジストリ集計、サイト管理タブでの登録済みサイト表示・新規追加・
+  不正ポート入力の拒否・サイト選択によるアクティブ切替・接続テスト
+  ボタン・削除。console上のJSエラーは無し(意図した接続失敗ログのみ)。
+  `certbot`/`systemctl` を伴う実際のTLS取得・自動更新は、実サーバー環境が
+  無いためスクリプトの構文・ロジック確認のみ(実運用環境での動作確認は
+  引き続き未実施)。
 
 ## HANDOFF(直近の自動巡回ログ、上が最新)
+
+- **2026-07-11(3回目パス)**: 「実用性・完成度・使いやすさをさらに向上」
+  という要望を受け、(1) 実ブラウザ検証: 前回パスで持ち越していた
+  `wasm-bindgen-cli` 導入 → `pkg/` 生成 → Playwright(Chromium)での実クリック
+  検証を完了(上記「現状」参照、全機能が期待通り動作しconsoleエラー無し)。
+  (2) 使いやすさ向上の実装: `src/history.rs` を新設しSQLクエリ履歴
+  (直近10件、`localStorage`、クリックで再読込)を追加、`render.rs` に
+  CSVエクスポート(`Blob`/`Url`/`<a download>`)と結果テーブルの行数表示・
+  スクロール・ヘッダー固定を追加、`lib.rs` にCtrl+Enter/Cmd+Enter実行
+  ショートカットとボタンの実行中無効化を追加、`profiles.rs` にサイトカード
+  ごとの「接続テスト」ボタン(アクティブなサイトを変えずに疎通確認)と
+  ポート番号の入力検証(1〜65535外は保存拒否)を追加。
+  `cargo build`/`cargo clippy`(`--target wasm32-unknown-unknown`)は
+  警告0件。
+  **次回パスがすべきこと**: (1) 実サーバー環境で `scripts/setup-tls.sh`/
+  `install-systemd-units.sh` の実動作(certbot取得・タイマー起動)を確認、
+  (2) README以外の8言語版README(English以降)は今回未更新のため、
+  必要なら同様に更新する、(3) 価値があれば `branches`/`log`/`diff` など
+  他のVcsQueryクエリ、または `registry`(DB一覧)クエリの追加UIを検討。
 
 - **2026-07-11(2回目パス)**: ユーザーからの要望「使い勝手向上・複数サイト
   (aruaru-web用/他用途用)の接続先管理を簡単に・IPアドレスからの起動・

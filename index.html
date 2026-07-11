@@ -75,14 +75,18 @@
         font-weight: 500;
       }
       button:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+      button:disabled { opacity: 0.5; cursor: not-allowed; }
+      button:disabled:hover { background: var(--bg); color: var(--accent); border-color: var(--border); }
       #status { font-size: 0.9rem; }
+      .hint { font-size: 0.8rem; margin: 0.35rem 0 0; }
+      .table-scroll { max-height: 60vh; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius); }
       #result table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
       #result th, #result td {
         border: 1px solid var(--border);
         padding: 0.4rem 0.55rem;
         text-align: left;
       }
-      #result th { background: var(--bg); }
+      #result th { background: var(--bg); position: sticky; top: 0; }
       #result .offline {
         background: rgba(217, 119, 6, 0.12);
         border: 1px solid rgba(217, 119, 6, 0.4);
@@ -151,7 +155,7 @@
         vertical-align: middle;
       }
       .site-card-meta, .site-card-stack { font-size: 0.82rem; margin-top: 0.2rem; }
-      .site-card-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
+      .site-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; flex-shrink: 0; max-width: 14rem; }
       .site-card-actions button { margin: 0; padding: 0.35rem 0.7rem; font-size: 0.85rem; }
       .form-grid {
         display: grid;
@@ -164,6 +168,25 @@
       }
       button.secondary { color: var(--muted); }
       section h2 { font-size: 1rem; margin: 0 0 0.5rem; }
+
+      /* クエリ履歴 */
+      .history-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; }
+      .history-item {
+        display: block;
+        width: 100%;
+        text-align: left;
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.82rem;
+        font-weight: 400;
+        color: var(--fg);
+      }
+      .history-item:hover { background: var(--bg); color: var(--accent); }
+
+      .test-result { font-size: 0.8rem; align-self: center; }
     </style>
   </head>
   <body>

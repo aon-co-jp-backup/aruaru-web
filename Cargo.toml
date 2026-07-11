@@ -23,6 +23,8 @@ serde_json = "1"
 [dependencies.web-sys]
 version = "0.3"
 features = [
+    "Blob",
+    "BlobPropertyBag",
     "console",
     "CssStyleDeclaration",
     "Document",
@@ -31,11 +33,13 @@ features = [
     "Event",
     "EventTarget",
     "Headers",
+    "HtmlAnchorElement",
     "HtmlButtonElement",
     "HtmlElement",
     "HtmlInputElement",
     "HtmlSelectElement",
     "HtmlTextAreaElement",
+    "KeyboardEvent",
     "Node",
     "NodeList",
     "Request",
@@ -43,6 +47,7 @@ features = [
     "RequestMode",
     "Response",
     "Storage",
+    "Url",
     "Window",
 ]
 

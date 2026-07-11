@@ -21,9 +21,15 @@ pub const SHELL_HTML: &str = r#"
   <section>
     <label for="sql-input">SQL</label>
     <textarea id="sql-input" rows="4"></textarea>
+    <p class="muted hint">Ctrl+Enter(Macは&#8984;+Enter)でも実行できます。</p>
     <div class="buttons">
       <button id="run-sql">SQLを実行</button>
+      <button id="export-csv" class="secondary" disabled>CSVでエクスポート</button>
     </div>
+  </section>
+  <section>
+    <h2>クエリ履歴(直近10件)</h2>
+    <div id="sql-history"></div>
   </section>
 </section>
 

@@ -154,8 +154,10 @@ pub fn render_site_manager() {
   </div>
   <div class="site-card-actions">
     <button class="site-select" data-id="{id}">選択</button>
+    <button class="site-test" data-id="{id}">接続テスト</button>
     <button class="site-edit" data-id="{id}">編集</button>
     <button class="site-delete" data-id="{id}">削除</button>
+    <span class="test-result muted" id="test-result-{id}"></span>
   </div>
 </div>"#,
             active_class = if is_active { " active" } else { "" },
@@ -181,8 +183,9 @@ fn wire_site_list_buttons() {
     let doc = document();
 
     type Handler = fn(String);
-    let wiring: [(&str, Handler); 3] = [
+    let wiring: [(&str, Handler); 4] = [
         ("site-select", on_select_site),
+        ("site-test", on_test_site),
         ("site-edit", on_edit_site),
         ("site-delete", on_delete_site),
     ];
@@ -212,6 +215,34 @@ fn on_select_site(id: String) {
         active_profile_name()
     ));
     sync_endpoint_field();
+}
+
+/// カードの「接続テスト」ボタン。アクティブなサイトを変えずに疎通確認だけ行う。
+fn on_test_site(id: String) {
+    let profiles = load_profiles();
+    let Some(profile) = profiles.iter().find(|p| p.id == id).cloned() else {
+        return;
+    };
+    let result_id = format!("test-result-{}", profile.id);
+    if let Some(el) = try_by_id(&result_id) {
+        el.set_text_content(Some("確認中…"));
+    }
+    wasm_bindgen_futures::spawn_local(async move {
+        let endpoint = profile.endpoint();
+        let outcome = crate::graphql::post_graphql(
+            &endpoint,
+            crate::graphql::REGISTRY_SUMMARY_QUERY,
+            serde_json::Value::Null,
+        )
+        .await;
+        let message = match outcome {
+            Ok(_) => "✅ 接続成功".to_string(),
+            Err(e) => format!("❌ 接続失敗: {e}"),
+        };
+        if let Some(el) = try_by_id(&result_id) {
+            el.set_text_content(Some(&message));
+        }
+    });
 }
 
 fn on_delete_site(id: String) {
@@ -300,7 +331,7 @@ pub fn on_save_site() {
     let name = get_val("site-name");
     let host = get_val("site-host");
     let path_raw = get_val("site-path");
-    let port: u16 = get_val("site-port").trim().parse().unwrap_or(8080);
+    let port_raw = get_val("site-port");
     let stack = get_val("site-stack");
     let purpose = get_select("site-purpose");
     let protocol = get_select("site-protocol");
@@ -309,6 +340,15 @@ pub fn on_save_site() {
         crate::dom::set_status("サイト名と接続先ホスト(IP/ドメイン)は必須です。");
         return;
     }
+    let port: u16 = match port_raw.trim().parse::<u32>() {
+        Ok(p) if (1..=65535).contains(&p) => p as u16,
+        _ => {
+            crate::dom::set_status(&format!(
+                "ポート番号が不正です(1〜65535の数値を入力してください): \"{port_raw}\""
+            ));
+            return;
+        }
+    };
     let path = if path_raw.trim().is_empty() {
         "/graphql".to_string()
     } else if path_raw.starts_with('/') {

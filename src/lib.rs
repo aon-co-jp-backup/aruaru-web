@@ -19,6 +19,7 @@
 
 mod dom;
 mod graphql;
+mod history;
 mod profiles;
 mod render;
 mod shell;
@@ -26,7 +27,7 @@ mod shell;
 use dom::{by_id, document, log, set_status};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{Event, HtmlButtonElement, HtmlInputElement, HtmlTextAreaElement};
+use web_sys::{Event, HtmlButtonElement, HtmlInputElement, HtmlTextAreaElement, KeyboardEvent};
 
 const DEFAULT_SQL: &str = "SELECT * FROM aruaru_log LIMIT 10;";
 
@@ -74,10 +75,30 @@ pub fn start() -> Result<(), JsValue> {
     clear_btn.set_onclick(Some(clear_closure.as_ref().unchecked_ref()));
     clear_closure.forget();
 
+    // 「CSVでエクスポート」ボタン
+    let export_btn: HtmlButtonElement = by_id("export-csv").dyn_into()?;
+    let export_closure = Closure::<dyn FnMut(Event)>::new(move |_evt: Event| {
+        render::download_csv();
+    });
+    export_btn.set_onclick(Some(export_closure.as_ref().unchecked_ref()));
+    export_closure.forget();
+
+    // SQL欄での Ctrl+Enter / Cmd+Enter ショートカット
+    let keydown_closure = Closure::<dyn FnMut(KeyboardEvent)>::new(move |evt: KeyboardEvent| {
+        if evt.key() == "Enter" && (evt.ctrl_key() || evt.meta_key()) {
+            evt.prevent_default();
+            on_run_sql();
+        }
+    });
+    sql_input
+        .add_event_listener_with_callback("keydown", keydown_closure.as_ref().unchecked_ref())?;
+    keydown_closure.forget();
+
     wire_tabs()?;
 
     profiles::render_site_manager();
     profiles::sync_endpoint_field();
+    history::render();
     show_tab("sql");
 
     set_status("準備完了。SQLを実行するか、レジストリ集計を取得してください。");
@@ -141,7 +162,14 @@ fn show_tab(tab: &str) {
 fn on_run_sql() {
     let endpoint = current_endpoint();
     let sql = current_sql();
+    if sql.trim().is_empty() {
+        set_status("SQLを入力してください。");
+        return;
+    }
+    history::push(&sql);
+    history::render();
     set_status("SQL実行中…");
+    set_button_busy("run-sql", true, "実行中…");
     wasm_bindgen_futures::spawn_local(async move {
         let variables = serde_json::json!({ "sql": sql });
         match graphql::post_graphql(&endpoint, graphql::SQL_QUERY, variables).await {
@@ -164,12 +192,21 @@ fn on_run_sql() {
                 ));
             }
         }
+        set_button_busy("run-sql", false, "SQLを実行");
     });
+}
+
+fn set_button_busy(id: &str, busy: bool, label: &str) {
+    if let Ok(btn) = by_id(id).dyn_into::<HtmlButtonElement>() {
+        btn.set_disabled(busy);
+        btn.set_text_content(Some(label));
+    }
 }
 
 fn on_run_registry_summary() {
     let endpoint = current_endpoint();
     set_status("レジストリ集計を取得中…");
+    set_button_busy("run-registry", true, "取得中…");
     wasm_bindgen_futures::spawn_local(async move {
         match graphql::post_graphql(&endpoint, graphql::REGISTRY_SUMMARY_QUERY, serde_json::Value::Null).await {
             Ok(body) => match graphql::extract_data(&body, "registrySummary") {
@@ -191,6 +228,7 @@ fn on_run_registry_summary() {
                 ));
             }
         }
+        set_button_busy("run-registry", false, "レジストリ集計を取得");
     });
 }
 
