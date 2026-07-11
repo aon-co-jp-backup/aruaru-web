@@ -57,7 +57,8 @@ pub fn render() {
     let mut html = String::from("<ul class=\"history-list\">");
     for sql in &history {
         html.push_str(&format!(
-            "<li><button class=\"history-item\" type=\"button\">{}</button></li>",
+            "<li><button class=\"history-item\" type=\"button\" title=\"{}\">{}</button></li>",
+            esc(sql),
             esc(sql)
         ));
     }

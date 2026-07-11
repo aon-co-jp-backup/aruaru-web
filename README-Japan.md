@@ -29,7 +29,14 @@ KUSANAGIのサイト一覧のように**複数の接続先(aruaru-web用・他�
 - **サイト管理タブ**: aruaru-web用・他プロジェクト用の接続先(IPアドレス/
   ドメイン/サブドメイン/ポート/パス)を複数登録し、`localStorage` に保存して
   ワンクリックで切り替えられる。SQL/レジストリタブのエンドポイント欄は
-  選択中のサイトに自動的に追従する。
+  選択中のサイトに自動的に追従する。カードごとに接続を切り替えずに疎通
+  確認できる**「接続テスト」ボタン**、ポート番号の入力検証(1〜65535)、
+  登録済みサイト一覧の**JSONエクスポート/インポート**(バックアップ・
+  他ブラウザへの持ち出し用)、削除前の確認ダイアログを備える。
+- **SQLタブの使いやすさ**: 直近10件の**クエリ履歴**(クリックで再読込・
+  ホバーで全文表示)、**Ctrl+Enter / Cmd+Enterでの実行ショートカット**、
+  実行結果の**CSVエクスポート**、実行中のボタン無効化、行数表示・
+  スクロール可能でヘッダー固定の結果テーブル。
 - **HTTPS(TLS)の自動設定・自動監視・自動更新**: `scripts/gen-vhost.sh` で
   Nginx/Apache の vhost(HTTP→HTTPSリダイレクト込み)を生成し、
   `scripts/setup-tls.sh` で Let's Encrypt(certbot)の証明書取得、
@@ -110,9 +117,14 @@ sudo deploy/systemd/install-systemd-units.sh
 - `cargo check --target wasm32-unknown-unknown` / `cargo build --target wasm32-unknown-unknown`
   ともに成功(警告0件)。
 - `wasm-bindgen --target web` で `pkg/aruaru_web.js` / `pkg/aruaru_web_bg.wasm` を生成し、
-  実ブラウザ(Chromium)で `index.html` を読み込み、WASMモジュールの起動ログ・
-  DOM構築・「SQLを実行」「レジストリ集計を取得」両ボタンのクリック→実際の
-  `fetch()` 発火→接続失敗時のオフラインサンプル描画までを確認済み。
+  実ブラウザ(Chromium、Playwright経由)で `index.html` を読み込み、以下を実際に
+  操作して確認済み: タブ切替、SQL実行→オフラインフォールバック描画、クエリ
+  履歴への記録・再読込・ホバー時のツールチップ、Ctrl+Enterショートカット、
+  CSVエクスポート(実ダウンロード発火)、レジストリ集計、サイト管理タブでの
+  登録済みサイト表示・新規追加・不正ポート入力の拒否・接続テストボタン・
+  JSONエクスポート/インポート(ラウンドトリップ確認済み)・削除確認ダイアログ
+  (キャンセル/実行の両方)。console上のJSエラーは無し(意図した接続失敗
+  ログのみ)。
 
 ## 構成
 
@@ -121,10 +133,11 @@ aruaru-web/
 ├── Cargo.toml            # crate-type = ["cdylib", "rlib"]、wasm-bindgen/web-sys依存
 ├── src/
 │   ├── lib.rs             # エントリポイント・タブ切り替え・イベント配線
-│   ├── dom.rs             # DOM操作の共通ヘルパー
+│   ├── dom.rs             # DOM操作の共通ヘルパー(ファイルダウンロード等)
 │   ├── graphql.rs         # /graphql への fetch呼び出し
-│   ├── render.rs          # SQL結果・レジストリ集計のレンダリング
-│   ├── profiles.rs        # サイト管理(接続プロファイル、localStorage保存)
+│   ├── render.rs          # SQL結果・レジストリ集計のレンダリング、CSV出力
+│   ├── profiles.rs        # サイト管理(接続プロファイル、localStorage保存、JSON入出力)
+│   ├── history.rs         # SQLクエリ履歴(直近10件、localStorage保存)
 │   └── shell.rs           # HTMLシェル(タブ・フォーム)
 ├── index.html             # pkg/ を読み込むローダー + CSS
 ├── pkg/                   # wasm-bindgen生成物(.gitignore対象、ビルドで再生成)

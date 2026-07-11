@@ -11,6 +11,7 @@
 
 use crate::dom::{by_id, document, esc, try_by_id};
 use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{HtmlInputElement, HtmlSelectElement};
 
@@ -246,7 +247,20 @@ fn on_test_site(id: String) {
 }
 
 fn on_delete_site(id: String) {
-    let mut profiles = load_profiles();
+    let profiles = load_profiles();
+    let name = profiles
+        .iter()
+        .find(|p| p.id == id)
+        .map(|p| p.name.clone())
+        .unwrap_or_else(|| "このサイト".to_string());
+    let confirmed = crate::dom::window()
+        .confirm_with_message(&format!("「{name}」を削除します。よろしいですか?"))
+        .unwrap_or(true);
+    if !confirmed {
+        return;
+    }
+
+    let mut profiles = profiles;
     profiles.retain(|p| p.id != id);
     save_profiles(&profiles);
     if active_profile_id().as_deref() == Some(id.as_str()) {
@@ -400,5 +414,76 @@ pub fn sync_endpoint_field() {
     }
     if let Some(el) = try_by_id("active-site-name") {
         el.set_text_content(Some(&active_profile_name()));
+    }
+}
+
+/// 登録済みサイト一覧をJSONファイルとしてダウンロードする(バックアップ・
+/// 他ブラウザ/他マシンへの持ち出し用)。
+pub fn export_profiles_json() {
+    let profiles = load_profiles();
+    let Ok(json) = serde_json::to_string_pretty(&profiles) else {
+        crate::dom::set_status("サイト一覧のエクスポートに失敗しました。");
+        return;
+    };
+    if crate::dom::trigger_download(
+        "aruaru-web-sites.json",
+        &json,
+        "application/json;charset=utf-8;",
+    )
+    .is_none()
+    {
+        crate::dom::set_status("サイト一覧のエクスポートに失敗しました。");
+    }
+}
+
+/// `<input type="file">` で選択されたJSONファイルを読み込み、
+/// 確認の上で登録済みサイト一覧を置き換える。
+pub fn import_profiles_from_file(file: web_sys::File) {
+    use web_sys::FileReader;
+
+    let Ok(reader) = FileReader::new() else {
+        crate::dom::set_status("ファイル読み込みの初期化に失敗しました。");
+        return;
+    };
+    let reader_for_closure = reader.clone();
+    let onload = Closure::<dyn FnMut()>::new(move || {
+        let text = reader_for_closure.result().ok().and_then(|v| v.as_string());
+        if let Some(text) = text {
+            apply_imported_json(&text);
+        } else {
+            crate::dom::set_status("ファイルの内容を読み取れませんでした。");
+        }
+    });
+    reader.set_onload(Some(onload.as_ref().unchecked_ref()));
+    onload.forget();
+    if reader.read_as_text(&file).is_err() {
+        crate::dom::set_status("ファイルの読み込みに失敗しました。");
+    }
+}
+
+fn apply_imported_json(text: &str) {
+    match serde_json::from_str::<Vec<SiteProfile>>(text) {
+        Ok(profiles) if !profiles.is_empty() => {
+            let confirmed = crate::dom::window()
+                .confirm_with_message(&format!(
+                    "{}件のサイトをインポートします。既存の登録済みサイトは置き換えられます。よろしいですか?",
+                    profiles.len()
+                ))
+                .unwrap_or(false);
+            if !confirmed {
+                crate::dom::set_status("インポートをキャンセルしました。");
+                return;
+            }
+            let count = profiles.len();
+            save_profiles(&profiles);
+            if let Some(first) = profiles.first() {
+                set_active_profile_id(&first.id);
+            }
+            render_site_manager();
+            sync_endpoint_field();
+            crate::dom::set_status(&format!("{count}件のサイトをインポートしました。"));
+        }
+        Ok(_) => crate::dom::set_status("インポートするサイトがありません(空のファイルです)。"),
+        Err(e) => crate::dom::set_status(&format!("JSONの読み込みに失敗しました: {e}")),
     }
 }

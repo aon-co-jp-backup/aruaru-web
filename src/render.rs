@@ -51,33 +51,11 @@ pub fn download_csv() {
     let Some(csv) = last_result_as_csv() else {
         return;
     };
-    if download_csv_inner(&csv).is_none() {
+    if crate::dom::trigger_download("aruaru-web-result.csv", &csv, "text/csv;charset=utf-8;")
+        .is_none()
+    {
         crate::dom::set_status("CSVのダウンロードに失敗しました。");
     }
-}
-
-fn download_csv_inner(csv: &str) -> Option<()> {
-    use js_sys::Array;
-    use web_sys::{Blob, BlobPropertyBag, Url};
-
-    let parts = Array::new();
-    parts.push(&wasm_bindgen::JsValue::from_str(csv));
-    let props = BlobPropertyBag::new();
-    props.set_type("text/csv;charset=utf-8;");
-    let blob = Blob::new_with_str_sequence_and_options(&parts, &props).ok()?;
-    let url = Url::create_object_url_with_blob(&blob).ok()?;
-
-    let document = crate::dom::document();
-    let anchor = document
-        .create_element("a")
-        .ok()?
-        .dyn_into::<web_sys::HtmlAnchorElement>()
-        .ok()?;
-    anchor.set_href(&url);
-    anchor.set_download("aruaru-web-result.csv");
-    anchor.click();
-    Url::revoke_object_url(&url).ok();
-    Some(())
 }
 
 /// `QueryResultGql { columns, rows, commandTag }` をテーブルとして描画する。

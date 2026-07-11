@@ -99,10 +99,10 @@ python -m http.server 8080   # index.html + pkg/ を配信
 
 - 2026-07-11 に本リポジトリを空の状態からブートストラップ(初回コミット)。
 - 単一クレート構成(`Cargo.toml`、`src/` は複数モジュールに分割:
-  `lib.rs`/`dom.rs`/`graphql.rs`/`render.rs`/`profiles.rs`/`shell.rs`。
-  workspaceではなく単体crate)。`crate-type = ["cdylib", "rlib"]`、依存は
-  `wasm-bindgen`/`wasm-bindgen-futures`/`js-sys`/`web-sys`/`serde`/`serde_json`
-  のみ。重量級フレームワーク無し。
+  `lib.rs`/`dom.rs`/`graphql.rs`/`render.rs`/`profiles.rs`/`history.rs`/
+  `shell.rs`。workspaceではなく単体crate)。`crate-type = ["cdylib", "rlib"]`、
+  依存は `wasm-bindgen`/`wasm-bindgen-futures`/`js-sys`/`web-sys`/`serde`/
+  `serde_json` のみ。重量級フレームワーク無し。
 - 実装済み機能:
   - タブ式UI(SQL実行 / レジストリ集計 / サイト管理)。`aruaru-graphql`
     `/graphql` への実 `fetch()`(`sql`/`registrySummary` クエリ)、接続失敗時は
@@ -114,12 +114,18 @@ python -m http.server 8080   # index.html + pkg/ を配信
     タブのエンドポイントに自動反映される。KUSANAGIのサイト一覧に相当する
     最小限の管理UIで、実際のDNS登録は行わない。カードごとに**「接続テスト」
     ボタン**(アクティブなサイトを変えずに疎通確認のみ実行)、ポート番号の
-    入力検証(1〜65535以外は保存を拒否しエラー表示)を実装。
+    入力検証(1〜65535以外は保存を拒否しエラー表示)、**削除前の確認
+    ダイアログ**、登録済みサイト一覧の**JSONエクスポート/インポート**
+    (`FileReader`、バックアップ・他ブラウザへの持ち出し用、インポート時も
+    確認ダイアログ)を実装。
   - **SQLタブの実用性向上**: 直近10件の**クエリ履歴**(`src/history.rs`、
-    `localStorage`保存、クリックで再読込)、**Ctrl+Enter / Cmd+Enterでの
-    実行ショートカット**、実行結果の**CSVエクスポート**(`Blob`+`Url`+
-    `<a download>`)、実行中はボタンを無効化してラベルを「実行中…」に変更、
-    結果テーブルは行数表示・スクロール可能・ヘッダー固定(sticky)。
+    `localStorage`保存、クリックで再読込、ホバーで全文表示のツールチップ)、
+    **Ctrl+Enter / Cmd+Enterでの実行ショートカット**、実行結果の
+    **CSVエクスポート**(`Blob`+`Url`+`<a download>`、`dom::trigger_download`
+    として共通化)、実行中はボタンを無効化してラベルを「実行中…」に変更、
+    結果テーブルは行数表示・スクロール可能・ヘッダー固定(sticky)、
+    `#status` に `aria-live="polite"` を付与しスクリーンリーダーにも状態
+    変化を通知。
   - **IPアドレスからの起動**: `scripts/serve.sh <BIND_IP> <PORT>` でローカル
     開発サーバーを任意のIP/ポートにbind。
   - **vhost生成・HTTPS自動設定**: `scripts/gen-vhost.sh <DOMAIN> <IP>
@@ -144,15 +150,43 @@ python -m http.server 8080   # index.html + pkg/ を配信
 - `wasm-bindgen-cli 0.2.126` を導入して `pkg/` を生成し、実Chromium
   (Playwright)で `index.html` を開き、以下を実クリック/実操作で確認済み:
   タブ切替、SQL実行→オフラインフォールバック描画、クエリ履歴への記録と
-  再読込、Ctrl+Enterショートカット、CSVエクスポート(実ダウンロード発火)、
-  レジストリ集計、サイト管理タブでの登録済みサイト表示・新規追加・
-  不正ポート入力の拒否・サイト選択によるアクティブ切替・接続テスト
-  ボタン・削除。console上のJSエラーは無し(意図した接続失敗ログのみ)。
-  `certbot`/`systemctl` を伴う実際のTLS取得・自動更新は、実サーバー環境が
-  無いためスクリプトの構文・ロジック確認のみ(実運用環境での動作確認は
-  引き続き未実施)。
+  再読込・ホバー時のツールチップ、Ctrl+Enterショートカット、CSVエクスポート
+  (実ダウンロード発火)、レジストリ集計、サイト管理タブでの登録済みサイト
+  表示・新規追加・不正ポート入力の拒否・サイト選択によるアクティブ切替・
+  接続テストボタン・削除確認ダイアログ(キャンセル/実行の両方)・JSON
+  エクスポート/インポートのラウンドトリップ。console上のJSエラーは無し
+  (意図した接続失敗ログのみ)。`certbot`/`systemctl` を伴う実際のTLS取得・
+  自動更新は、実サーバー環境が無いためスクリプトの構文・ロジック確認のみ
+  (実運用環境での動作確認は引き続き未実施)。
+- README(ルート、英語以下9言語)は全て最新の機能セット(サイト管理・
+  IPアドレス起動・HTTPS自動化・SQLクエリ履歴/CSV/ショートカット)に同期
+  済み。コードブロック(コマンド・パス・URL・ライセンス識別子)は各言語版
+  でも翻訳せず原文のまま。
 
 ## HANDOFF(直近の自動巡回ログ、上が最新)
+
+- **2026-07-11(4回目パス)**: 「より使いやすさ・完成度・実用性の見直し」
+  という要望を受けて実装。(1) 使いやすさ/実用性の追加改善: `dom.rs` に
+  ファイルダウンロード共通ヘルパー(`trigger_download`)を追加しCSV/JSON
+  エクスポートで共用、サイト削除に確認ダイアログ(`window.confirm`)を追加、
+  登録済みサイト一覧の**JSONエクスポート/インポート**(`profiles.rs`、
+  `FileReader`経由、インポート時も確認ダイアログ)を追加、クエリ履歴項目に
+  ホバー時ツールチップ(`title`属性)を追加、`#status` に
+  `aria-live="polite"` を付与(スクリーンリーダー対応)。
+  (2) 全機能をPlaywright(Chromium)で実ブラウザ再検証(上記「現状」参照、
+  削除確認のキャンセル/実行・JSONエクスポート→インポートのラウンド
+  トリップまで確認)。
+  (3) 8言語版README(English/Chinese/Korea/Spain/France/Germany/Italy/
+  Russia/Arabic)を専用サブエージェント9体の並列実行で、現在のルート
+  README.md(日本語)の内容に完全同期(サイト管理タブ・IPアドレス起動・
+  HTTPS自動化・SQLクエリ履歴/CSV/ショートカットの記載を反映)。
+  `cargo build`/`cargo clippy`(`--target wasm32-unknown-unknown`)は
+  警告0件。
+  **次回パスがすべきこと**: (1) 実サーバー環境で `scripts/setup-tls.sh`/
+  `install-systemd-units.sh` の実動作(certbot取得・タイマー起動)を確認、
+  (2) 価値があれば `branches`/`log`/`diff` など他のVcsQueryクエリ、または
+  `registry`(DB一覧)クエリの追加UIを検討(ただしaruaru-db側の実スキーマを
+  確認できる場合のみ実装し、推測でのフィールド追加は避ける)。
 
 - **2026-07-11(3回目パス)**: 「実用性・完成度・使いやすさをさらに向上」
   という要望を受け、(1) 実ブラウザ検証: 前回パスで持ち越していた

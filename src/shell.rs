@@ -53,6 +53,11 @@ pub const SHELL_HTML: &str = r#"
       には <code>scripts/gen-vhost.sh</code> を使ってください。
     </p>
     <div id="site-list"></div>
+    <div class="buttons">
+      <button id="site-export" class="secondary">エクスポート(JSON)</button>
+      <button id="site-import-trigger" class="secondary">インポート(JSON)</button>
+      <input id="site-import-file" type="file" accept="application/json" style="display:none" />
+    </div>
   </section>
   <section>
     <h2>サイトを追加・編集</h2>
@@ -100,6 +105,6 @@ pub const SHELL_HTML: &str = r#"
   </section>
 </section>
 
-<p id="status" class="muted"></p>
+<p id="status" class="muted" aria-live="polite"></p>
 <section id="result"></section>
 "#;

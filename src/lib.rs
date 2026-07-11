@@ -83,6 +83,37 @@ pub fn start() -> Result<(), JsValue> {
     export_btn.set_onclick(Some(export_closure.as_ref().unchecked_ref()));
     export_closure.forget();
 
+    // 「サイト一覧をエクスポート(JSON)」ボタン
+    let site_export_btn: HtmlButtonElement = by_id("site-export").dyn_into()?;
+    let site_export_closure = Closure::<dyn FnMut(Event)>::new(move |_evt: Event| {
+        profiles::export_profiles_json();
+    });
+    site_export_btn.set_onclick(Some(site_export_closure.as_ref().unchecked_ref()));
+    site_export_closure.forget();
+
+    // 「サイト一覧をインポート(JSON)」ボタン → 隠しファイル入力をクリック
+    let site_import_trigger: HtmlButtonElement = by_id("site-import-trigger").dyn_into()?;
+    let site_import_file: web_sys::HtmlInputElement = by_id("site-import-file").dyn_into()?;
+    let import_file_for_trigger = site_import_file.clone();
+    let site_import_trigger_closure = Closure::<dyn FnMut(Event)>::new(move |_evt: Event| {
+        import_file_for_trigger.click();
+    });
+    site_import_trigger.set_onclick(Some(site_import_trigger_closure.as_ref().unchecked_ref()));
+    site_import_trigger_closure.forget();
+
+    let import_file_for_change = site_import_file.clone();
+    let site_import_change_closure = Closure::<dyn FnMut(Event)>::new(move |_evt: Event| {
+        if let Some(files) = import_file_for_change.files() {
+            if let Some(file) = files.get(0) {
+                profiles::import_profiles_from_file(file);
+            }
+        }
+        import_file_for_change.set_value("");
+    });
+    site_import_file
+        .set_onchange(Some(site_import_change_closure.as_ref().unchecked_ref()));
+    site_import_change_closure.forget();
+
     // SQL欄での Ctrl+Enter / Cmd+Enter ショートカット
     let keydown_closure = Closure::<dyn FnMut(KeyboardEvent)>::new(move |evt: KeyboardEvent| {
         if evt.key() == "Enter" && (evt.ctrl_key() || evt.meta_key()) {
