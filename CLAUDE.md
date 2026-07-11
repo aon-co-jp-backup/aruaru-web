@@ -48,6 +48,14 @@
   (`aruaru-db/crates/aruaru-graphql`)。`aruaru-web` はこのサブグラフの
   クライアントとして動作する。
 
+## poem-cosmo-tauri と open-runo の違い(2026-07-11、ユーザー確認済み、open-raid-z正本より転記)
+
+両者は共通コア(Cosmo有料版機能のOSS Rust再実装)を持つが**全く違う
+リポジトリのプロジェクト**であり統合対象ではない。poem-cosmo-tauri は
+さらに範囲が広く、Poem/Tauriの**全機能をAI駆動開発で一から自作・再現する**
+という上乗せ目標を持つ(open-runoにはない)。詳細は open-raid-z の
+`CLAUDE.md` を参照。
+
 ## ビルド手順(このリポジトリ固有)
 
 ```bash
