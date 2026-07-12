@@ -2,13 +2,19 @@
 
 **UI Web minimale per aruaru-db (Rust → WebAssembly, senza framework)**
 
-Una dashboard a schede che invoca realmente, dal browser, la query `sql` e
+È una dashboard a schede che invoca realmente, dal browser, la query `sql` e
 la query `registrySummary` (aggregato del registro dei database supportati)
 esposte tramite GraphQL (`/graphql`) da `aruaru-db` (il database distribuito
-Git-on-SQL), mostrandone i risultati. Oltre all'esecuzione di SQL e
-all'aggregazione del registro, dispone di una scheda **"Gestione siti"** che,
-come l'elenco dei siti di KUSANAGI, permette di registrare e alternare tra
-**più destinazioni di connessione (per aruaru-web e per altri progetti)**.
+Git-on-SQL), mostrandone i risultati. Punta inoltre a diventare **"il
+secondo KUSANAGI"** (uno strumento operativo, sul modello di KUSANAGI — il
+kit per la realizzazione di server ottimizzati per WordPress — che consente
+di caricare l'applicazione, avviarla da un indirizzo IP e applicare
+facilmente e in automatico la registrazione del dominio e l'attivazione di
+HTTPS): dispone perciò di una scheda "Gestione siti" per registrare e
+alternare tra più destinazioni di connessione (per aruaru-web e per altri
+progetti), e dell'intero corredo per l'avvio da indirizzo IP, la
+generazione dei vhost e la configurazione/il monitoraggio/il rinnovo
+automatico di HTTPS (TLS).
 
 📖 Altre lingue: [日本語](README-Japan.md) / [English](README-English.md) /
 [中文](README-Chinese.md) / [한국어](README-Korea.md) / [Español](README-Spain.md) /
@@ -25,14 +31,6 @@ come l'elenco dei siti di KUSANAGI, permette di registrare e alternare tra
     `columns`/`rows`/`commandTag` in una tabella
   - `registrySummary: RegistrySummaryGql` — mostra in schede riepilogative
     l'aggregato del registro dei database supportati (oltre 150 voci)
-  - `registry: [DbEntryGql!]!` — mostra in una tabella l'**elenco** del
-    registro dei database supportati (nome/categoria/compatibilità del wire
-    protocol/stato/posizione in classifica/punteggio/data di aggiornamento)
-- **Scheda "Gestione versioni"**: consente di eseguire `currentBranch`/
-  `branches` (elenco branch e branch corrente), `log(limit)` (log dei
-  commit) e `diff(from, to)` (numero di aggiunte/rimozioni/modifiche tra
-  branch). Tutte si basano sullo schema reale (`VcsQuery`) di
-  `aruaru-db/crates/aruaru-graphql`.
 - Se `aruaru-server` non è avviato o non è raggiungibile, viene disegnato al
   volo un **set di dati di esempio con la stessa forma dello schema reale**,
   indicando chiaramente che si tratta di un "campione offline" (comportamento
@@ -65,6 +63,15 @@ come l'elenco dei siti di KUSANAGI, permette di registrare e alternare tra
 
 ## Cosa non funziona ancora (limiti dichiarati onestamente)
 
+- **Le query di gestione delle versioni di aruaru-db (branch/log/diff ecc.)
+  e il recupero dell'elenco dettagliato del registro sono intenzionalmente
+  fuori dall'ambito del progetto**: l'obiettivo di questo repository è
+  diventare uno strumento operativo in stile "il secondo KUSANAGI" (avvio
+  da indirizzo IP, semplificazione della registrazione del dominio,
+  automazione di HTTPS), e non è previsto, nemmeno in futuro, di ampliare
+  l'interfaccia di gestione del database oltre alle funzionalità minime di
+  connessione ad aruaru-db costituite dall'esecuzione SQL e dall'aggregato
+  del registro.
 - Le mutation GraphQL (creazione branch, merge, crawl del registro, ecc.)
   non sono implementate.
 - Autenticazione, paginazione e retry automatico in caso di errore non sono
@@ -151,16 +158,13 @@ destinazione effettuato dal browser.
   SQL con conseguente rendering di fallback offline, la registrazione/
   ricarica nella cronologia delle query e il tooltip al passaggio del
   mouse, la scorciatoia Ctrl+Invio, l'esportazione CSV (con avvio effettivo
-  del download), l'aggregazione del registro e il recupero dell'elenco dei
-  DB registrati, nella scheda "Gestione versioni" l'ottenimento
-  dell'elenco branch, del log dei commit e del Diff (in tutti i casi con
-  fallback offline incluso), e nella scheda "Gestione siti": la
-  visualizzazione dei siti registrati, l'aggiunta di un nuovo sito, il
-  rifiuto di una porta non valida, il pulsante di test di connessione,
-  l'esportazione/importazione JSON (verificata in andata e ritorno) e la
-  finestra di conferma dell'eliminazione (sia annullamento sia conferma).
-  Nessun errore JS in console (solo i log di fallimento di connessione
-  attesi).
+  del download), l'aggregazione del registro, e nella scheda "Gestione
+  siti": la visualizzazione dei siti registrati, l'aggiunta di un nuovo
+  sito, il rifiuto di una porta non valida, il pulsante di test di
+  connessione, l'esportazione/importazione JSON (verificata in andata e
+  ritorno) e la finestra di conferma dell'eliminazione (sia annullamento
+  sia conferma). Nessun errore JS in console (solo i log di fallimento di
+  connessione attesi).
 - Sono stati effettivamente installati Nginx 1.24 (standard su Ubuntu
   24.04), Apache 2.4 e certbot; i file generati da `scripts/gen-vhost.sh`
   sono stati avviati realmente con un certificato autofirmato e verificati

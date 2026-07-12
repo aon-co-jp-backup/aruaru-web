@@ -5,11 +5,16 @@
 Dies ist ein Tab-basiertes Dashboard, das die von `aruaru-db` (der verteilten
 Git-on-SQL-Datenbank) über GraphQL (`/graphql`) bereitgestellten Queries `sql`
 und `registrySummary` (Aggregat der Registry unterstützter Datenbanken) direkt
-aus dem Browser heraus aufruft und die Ergebnisse anzeigt. Neben der
-SQL-Ausführung und der Registry-Zusammenfassung besitzt es, ähnlich der
-Site-Liste von KUSANAGI, einen **"Sitenverwaltung"-Tab, in dem sich mehrere
+aus dem Browser heraus aufruft und die Ergebnisse anzeigt. Darüber hinaus
+verfolgt das Projekt das Ziel, **"das zweite KUSANAGI"** zu sein — vergleichbar
+mit dem WordPress-Beschleunigungs-Baukasten KUSANAGI: ein Ops-Tool, mit dem
+sich diese App hochladen, per IP-Adresse starten und anschließend
+Domain-Registrierung sowie HTTPS-Einrichtung bequem automatisiert anwenden
+lassen. Dazu gehören ein "Sitenverwaltung"-Tab, in dem sich mehrere
 Verbindungsziele (für aruaru-web selbst sowie für andere Projekte) anlegen und
-per Klick wechseln lassen**.
+per Klick wechseln lassen, sowie das komplette Paket aus IP-Start,
+vhost-Erzeugung und automatischer Einrichtung/Überwachung/Erneuerung von
+HTTPS (TLS).
 
 📖 Andere Sprachen: [日本語](README-Japan.md) / [English](README-English.md) /
 [中文](README-Chinese.md) / [한국어](README-Korea.md) / [Español](README-Spain.md) /
@@ -26,14 +31,6 @@ per Klick wechseln lassen**.
     zeigt `columns`/`rows`/`commandTag` als Tabelle an
   - `registrySummary: RegistrySummaryGql` — zeigt die Zusammenfassung der
     Registry unterstützter Datenbanken (über 150 Einträge) als Karten an
-  - `registry: [DbEntryGql!]!` — zeigt die **Liste** der Registry
-    unterstützter Datenbanken als Tabelle an (Name/Kategorie/
-    Wire-Kompatibilität/Status/Rang/Score/Aktualisierungsdatum)
-- **Versionsverwaltung-Tab**: Führt `currentBranch`/`branches` (Liste der
-  Branches sowie der aktuelle Branch), `log(limit)` (Commit-Log) und
-  `diff(from, to)` (Anzahl der zwischen zwei Branches hinzugefügten,
-  gelöschten und geänderten Zeilen) aus. All dies basiert auf dem echten
-  Schema (`VcsQuery`) von `aruaru-db/crates/aruaru-graphql`.
 - Ist `aruaru-server` nicht gestartet oder nicht erreichbar, rendert die Seite
   sofort **Beispieldaten in exakt der Form des echten Schemas** und
   kennzeichnet sie deutlich als "Offline-Beispiel" (dieses Verhalten wurde in
@@ -67,6 +64,14 @@ per Klick wechseln lassen**.
 
 ## Was aktuell (noch) nicht funktioniert (ehrlicher Umfang)
 
+- **Vertiefende Datenbankfunktionen wie die versionsverwaltungsbezogenen
+  Queries von aruaru-db (Branches, Log, Diff usw.) oder eine detaillierte
+  Registry-Liste sind bewusst nicht vorgesehen.** Das Ziel dieses
+  Repositories ist ein Ops-Tool im Sinne des "zweiten KUSANAGI" (Start per
+  IP-Adresse, vereinfachte Domain-Registrierung, automatisiertes HTTPS) — eine
+  Erweiterung der DB-Verwaltungs-UI über die minimale aruaru-db-Anbindung
+  (SQL-Ausführung und Registry-Zusammenfassung) hinaus ist auch künftig nicht
+  geplant.
 - GraphQL-Mutationen (Branch-Erstellung, Merge, Registry-Crawl usw.) sind
   noch nicht implementiert.
 - Authentifizierung, Paginierung und automatische Wiederholung bei Fehlern
@@ -152,16 +157,13 @@ stimmen die Ziele mit der Verbindungsauswahl im Browser überein.
   Klick geprüft: Tab-Wechsel, SQL-Ausführung mit anschließendem Rendering des
   Offline-Fallbacks, Aufzeichnung und erneutes Laden aus dem Query-Verlauf
   samt Tooltip beim Hovern, die Ctrl+Enter-Tastenkombination, der CSV-Export
-  (mit tatsächlich ausgelöstem Download), das Abrufen der
-  Registry-Zusammenfassung und der Liste registrierter Datenbanken, das
-  Abrufen von Branch-Liste, Commit-Log und Diff im Versionsverwaltung-Tab
-  (jeweils einschließlich des Offline-Fallbacks), die Anzeige registrierter
-  Sites im Sitenverwaltung-Tab, das Anlegen neuer Sites, die Ablehnung
-  ungültiger Porteingaben, die "Verbindungstest"-Taste, JSON-Export/-Import
-  (Roundtrip verifiziert) sowie der Bestätigungsdialog vor dem Löschen
-  (sowohl Abbrechen als auch Ausführen). Es traten keine JS-Fehler in der
-  Konsole auf (nur die beabsichtigten Protokollmeldungen zu fehlgeschlagenen
-  Verbindungen).
+  (mit tatsächlich ausgelöstem Download), die Registry-Zusammenfassung, die
+  Anzeige registrierter Sites im Sitenverwaltung-Tab, das Anlegen neuer
+  Sites, die Ablehnung ungültiger Porteingaben, die "Verbindungstest"-Taste,
+  JSON-Export/-Import (Roundtrip verifiziert) sowie der Bestätigungsdialog
+  vor dem Löschen (sowohl Abbrechen als auch Ausführen). Es traten keine
+  JS-Fehler in der Konsole auf (nur die beabsichtigten Protokollmeldungen zu
+  fehlgeschlagenen Verbindungen).
 - Nginx 1.24 (Standard unter Ubuntu 24.04), Apache 2.4 und certbot wurden
   tatsächlich installiert; die von `scripts/gen-vhost.sh` erzeugten
   Konfigurationen wurden mit einem selbstsignierten Zertifikat real

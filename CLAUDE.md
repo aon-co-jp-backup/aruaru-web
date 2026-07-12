@@ -15,6 +15,16 @@
 `aruaru-db`/`open-runo`/`open-web-server` とは別チームの並行作業対象であり、
 それらのディレクトリには立ち入らない**(README/CLAUDE.mdの参照のみ可)。
 
+**方針(2026-07-12、ユーザー確認済み)**: `aruaru-web` は「**第二のKUSANAGI**」
+(WordPress高速化サーバー構築キットKUSANAGIのような、アプリのアップロード後に
+IPアドレスから起動し、ドメイン登録・HTTPS化を簡単に自動適用できる運用ツール)
+を目指す。具体的には「サイト管理タブ」「IPアドレス起動」「vhost生成・HTTPS
+自動設定/監視/更新」が中核機能であり、**aruaru-db側のDB機能を深掘りする方向
+(VcsQueryのブランチ/ログ/Diff拡張、レジストリ詳細一覧など)は意図的に対象外**
+とする。SQL実行・レジストリ集計という最小限のaruaru-db接続機能を超えたDB管理
+UIの拡張は行わない(過去に一度実装したが、ユーザーの意図と異なったため撤去
+済み。詳細はHANDOFFログ参照)。
+
 ## フロントエンド(2026-07-10、方針更新 — open-raid-zより)
 
 - Tauriパッケージには直接依存しない。ただしTauriのデスクトップUI体験・
@@ -195,6 +205,43 @@ python -m http.server 8080   # index.html + pkg/ を配信
   でも翻訳せず原文のまま。
 
 ## HANDOFF(直近の自動巡回ログ、上が最新)
+
+- **2026-07-12(8回目パス)**: ユーザーから明確な方針転換の指示:
+  「第二のKUSANAGIで、このアプリをUPLOAD後にIPアドレスで起動して簡単に
+  ドメイン登録とHTTPSを自動適用。この後、DB対応は意図してません。」
+  これを受け、6回目パスで追加した「バージョン管理タブ」(VcsQuery:
+  branches/currentBranch/log/diff)と「レジストリ集計タブ」の
+  「登録DB一覧を取得」(registry クエリ)を**撤去**。
+  - `src/shell.rs`: `tab-vcs` セクション・`run-registry-list` ボタンを削除。
+  - `src/lib.rs`: 該当ボタンの配線・`on_run_branches`/`on_run_log`/
+    `on_run_diff`/`on_run_registry_list` ハンドラ・`show_tab` のタブ一覧
+    エントリを削除。
+  - `src/graphql.rs`: `BRANCHES_QUERY`/`LOG_QUERY`/`DIFF_QUERY`/
+    `REGISTRY_LIST_QUERY` を削除(`SQL_QUERY`/`REGISTRY_SUMMARY_QUERY`は
+    維持)。
+  - `src/render.rs`: `render_branches`/`render_log`/`render_diff`/
+    `render_registry_list` とそれぞれのオフラインサンプル関数、
+    `str_field` ヘルパーを削除。共通テーブル描画ヘルパー `render_table`
+    自体は `render_query_result`(SQLタブ)の実装簡素化に資するため
+    そのまま維持。
+  - README(ルート+全9言語)から「バージョン管理タブ」「registry一覧」の
+    記載を除去し、代わりに「aruaru-webは"第二のKUSANAGI"(アプリの
+    アップロード後にIPアドレスから起動し、ドメイン登録・HTTPS化を簡単に
+    自動適用できる運用ツール)を目指し、aruaru-db側のDB機能を深掘りする
+    方向(VcsQuery拡張・レジストリ詳細一覧等)は意図的に対象外とする」旨を
+    「いまできないこと」節に明記(専用サブエージェント9体を並列実行して
+    全言語版に反映)。冒頭の紹介文・「このリポジトリの役割」節にも同じ
+    方針を追記。
+  - `cargo build`/`cargo clippy`(`--target wasm32-unknown-unknown`)は
+    警告0件。`wasm-bindgen` → Playwright(Chromium)で、バージョン管理タブ・
+    登録DB一覧ボタンが実際に消えていること、SQL実行・レジストリ集計・
+    サイト管理の既存機能が引き続き正常動作することを実クリックで確認済み。
+  - `aruaru-db`(読み取り専用参照、`/workspace/aruaru-db`)への変更は
+    一切無し。
+  **今後の方針**: aruaru-db側のクエリ機能拡張(VcsQuery/AdminQueryの
+  深掘り)は行わない。今後の増分は「第二のKUSANAGI」路線
+  (IPアドレス起動・vhost/ドメイン登録・HTTPS自動設定/監視/更新・
+  サイト管理・SQL/レジストリ集計UIの使いやすさ)に集中する。
 
 - **2026-07-11(7回目パス)**: 「適材適所で完成度を高めて」という要望を受け、
   前回パス(6回目)でルートREADME.md/README-Japan.mdにのみ追記した

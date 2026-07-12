@@ -6,11 +6,16 @@ Un tableau de bord à onglets qui interroge réellement, depuis le navigateur,
 la requête `sql` et la requête `registrySummary` (agrégat du registre des
 bases de données supportées) exposées en GraphQL (`/graphql`) par
 `aruaru-db` (la base de données distribuée Git-on-SQL), et qui en affiche
-les résultats. En plus de l'exécution SQL et de l'agrégation du registre,
-il dispose, à la manière de la liste de sites de KUSANAGI, d'un **onglet
-« Gestion des sites » permettant d'enregistrer et de basculer entre
-plusieurs points de connexion (pour aruaru-web comme pour d'autres
-projets)**.
+les résultats. Au-delà de cela, le projet vise à devenir **« le second
+KUSANAGI »** (à l'image de KUSANAGI, le kit de construction de serveurs
+optimisés pour WordPress : après avoir déployé l'application, on la
+démarre depuis une adresse IP et on applique facilement, de façon
+automatisée, l'enregistrement de domaine et le passage en HTTPS). Il
+comporte pour cela un onglet « Gestion des sites » permettant d'enregistrer
+et de basculer entre plusieurs points de connexion (pour aruaru-web comme
+pour d'autres projets), ainsi qu'un ensemble complet couvrant le démarrage
+depuis une adresse IP, la génération de vhost, et la
+configuration/surveillance/renouvellement automatiques de HTTPS (TLS).
 
 📖 Autres langues : [日本語](README-Japan.md) / [English](README-English.md) /
 [中文](README-Chinese.md) / [한국어](README-Korea.md) / [Español](README-Spain.md) /
@@ -28,15 +33,6 @@ projets)**.
   - `registrySummary: RegistrySummaryGql` — affiche sous forme de cartes
     l'agrégat du registre des bases de données supportées (plus de 150
     entrées)
-  - `registry: [DbEntryGql!]!` — affiche sous forme de tableau la **liste**
-    du registre des bases de données supportées (nom / catégorie /
-    compatibilité de protocole / état / rang / score / date de mise à jour)
-- **Onglet « Gestion de versions »** : permet d'exécuter `currentBranch`/
-  `branches` (liste des branches et branche courante), `log(limit)`
-  (journal des commits) et `diff(from, to)` (différence entre deux
-  branches : nombre de lignes ajoutées / supprimées / modifiées). Ces
-  trois requêtes s'appuient sur le schéma réel `VcsQuery` de
-  `aruaru-db/crates/aruaru-graphql`.
 - Si `aruaru-server` n'est pas démarré ou n'est pas joignable, l'UI affiche
   immédiatement des **données d'exemple ayant exactement la forme du schéma
   réel**, avec une mention explicite indiquant qu'il s'agit d'un
@@ -70,6 +66,15 @@ projets)**.
 
 ## Ce qui n'est pas encore possible (limites assumées)
 
+- **Les requêtes de gestion de versions d'aruaru-db (branches, journal des
+  commits, diff, etc.) ainsi que la récupération de la liste détaillée du
+  registre sont volontairement hors périmètre.** L'objectif de ce dépôt est
+  un outil d'exploitation dans l'esprit du « second KUSANAGI » (démarrage
+  depuis une adresse IP, simplification de l'enregistrement de domaine,
+  automatisation de HTTPS), et non l'extension de l'interface
+  d'administration/requêtage d'aruaru-db au-delà des fonctions minimales de
+  connexion que sont l'exécution SQL et l'agrégat du registre — aucune
+  extension de ce type n'est prévue pour la suite.
 - Les mutations GraphQL (création de branche, fusion, crawl du registre,
   etc.) ne sont pas implémentées.
 - L'authentification, la pagination et les nouvelles tentatives
@@ -160,16 +165,12 @@ navigateur.
   affichage du repli hors ligne, enregistrement dans l'historique des
   requêtes → rechargement → infobulle au survol, raccourci Ctrl+Entrée,
   export CSV (déclenchement réel du téléchargement), agrégation du
-  registre et récupération de la liste des bases de données enregistrées,
-  récupération dans l'onglet « Gestion de versions » de la liste des
-  branches, du journal des commits et du diff (y compris le repli hors
-  ligne dans chaque cas), affichage des sites enregistrés dans l'onglet
-  « Gestion des sites », ajout d'un nouveau site, rejet d'un numéro de
-  port invalide, bouton de test de connexion, export/import JSON
-  (aller-retour vérifié), boîte de dialogue de confirmation de suppression
-  (annulation et validation testées toutes les deux). Aucune erreur JS
-  dans la console (seuls les journaux d'échec de connexion attendus
-  apparaissent).
+  registre, affichage des sites enregistrés dans l'onglet « Gestion des
+  sites », ajout d'un nouveau site, rejet d'un numéro de port invalide,
+  bouton de test de connexion, export/import JSON (aller-retour vérifié),
+  boîte de dialogue de confirmation de suppression (annulation et
+  validation testées toutes les deux). Aucune erreur JS dans la console
+  (seuls les journaux d'échec de connexion attendus apparaissent).
 - Nginx 1.24 (la version standard d'Ubuntu 24.04), Apache 2.4 et certbot
   ont été réellement installés ; les fichiers générés par
   `scripts/gen-vhost.sh` ont été démarrés avec un certificat auto-signé et

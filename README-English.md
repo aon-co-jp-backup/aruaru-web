@@ -5,10 +5,15 @@
 A tabbed dashboard that calls the `sql` query and the `registrySummary`
 (supported-database registry aggregate) query — both exposed over GraphQL
 (`/graphql`) by `aruaru-db`, the distributed Git-on-SQL database — directly
-from the browser and renders the results. Beyond running SQL and viewing the
-registry summary, it also has a **"Site Manager" tab, modeled on KUSANAGI's
-site list, that lets you register multiple connection targets (for
-aruaru-web itself and for other projects) and switch between them**.
+from the browser and renders the results. Beyond that, it aims to be
+**"the second KUSANAGI"** — an operations tool, in the spirit of the
+WordPress-acceleration server-building kit KUSANAGI, that lets you upload
+the app, launch it from an IP address, and easily apply automatic domain
+registration and HTTPS setup. To that end it ships a "Site Manager" tab for
+registering and switching between multiple connection targets (for
+aruaru-web itself and for other projects), together with a full set of
+tools for launching from an IP address, generating vhosts, and automatically
+setting up, monitoring, and renewing HTTPS (TLS).
 
 Other languages: [日本語](README-Japan.md) / [English](README-English.md) /
 [中文](README-Chinese.md) / [한국어](README-Korea.md) / [Español](README-Spain.md) /
@@ -25,14 +30,6 @@ Other languages: [日本語](README-Japan.md) / [English](README-English.md) /
     `columns`/`rows`/`commandTag` as a table
   - `registrySummary: RegistrySummaryGql` — render the aggregate counts of
     the 150+ entry supported-database registry as summary cards
-  - `registry: [DbEntryGql!]!` — render the **full list** of the
-    supported-database registry as a table (name / category / wire
-    compatibility / status / rank / score / last updated)
-- **Version-control tab**: run `currentBranch`/`branches` (the list of
-  branches and the current branch), `log(limit)` (the commit log), and
-  `diff(from, to)` (added/removed/changed counts between two branches). All
-  of these are based on the real schema (`VcsQuery`) in
-  `aruaru-db/crates/aruaru-graphql`.
 - If `aruaru-server` is not running or unreachable, the page immediately
   renders **sample data shaped exactly like the real schema** and clearly
   labels it as an offline sample (verified in a real browser session — see
@@ -61,6 +58,13 @@ Other languages: [日本語](README-Japan.md) / [English](README-English.md) /
 
 ## What doesn't work yet (honest scope)
 
+- **Deepening the aruaru-db query/admin surface — version-control queries
+  (branches, log, diff, etc.) and fetching the full registry list — is
+  intentionally out of scope.** This repository's aim is to be a
+  KUSANAGI-like operations tool (launching from an IP address, simplifying
+  domain registration, automating HTTPS), and there are no plans to extend
+  the DB admin UI beyond the minimal aruaru-db connectivity it already has —
+  running SQL and viewing the registry summary.
 - GraphQL mutations (branch creation, merge, registry crawl, etc.) are not
   implemented.
 - No authentication, pagination, or automatic retry on error.
@@ -144,11 +148,9 @@ endpoint you switch to from the browser.
   operating the UI: switching tabs, running SQL and seeing it fall back to
   offline sample rendering, query history being recorded/reloaded and its
   hover tooltip, the Ctrl+Enter shortcut, CSV export (a real download
-  firing), fetching the registry summary and the registry list, the
-  Version-control tab's branch list, commit log, and diff retrieval (all
-  including the offline fallback), the Site Manager tab showing registered
-  sites, adding a new site, rejecting an invalid port number, the test
-  connection button, JSON export/import (round-trip verified), and the
+  firing), fetching the registry summary, the Site Manager tab showing
+  registered sites, adding a new site, rejecting an invalid port number, the
+  test connection button, JSON export/import (round-trip verified), and the
   delete confirmation dialog (both cancel and confirm). No JS errors
   appeared in the console (only the expected connection-failure logging).
 - Actually installed Nginx 1.24 (the Ubuntu 24.04 default), Apache 2.4, and
@@ -205,3 +207,5 @@ aruaru-web/
 ## License
 
 Apache-2.0
+</content>
+</invoke>

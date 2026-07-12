@@ -6,10 +6,15 @@ Es un panel de control con pestañas que llama de verdad, desde el navegador,
 a la consulta `sql` y a la consulta `registrySummary` (resumen del registro
 de bases de datos soportadas) que `aruaru-db` (la base de datos distribuida
 Git-on-SQL) expone mediante GraphQL (`/graphql`), y muestra los resultados.
-Además de la ejecución de SQL y el resumen del registro, incluye una
-**pestaña de "Gestión de sitios"** que permite registrar y alternar entre
-**varios destinos de conexión (para aruaru-web y para otros proyectos)**, de
-forma similar al listado de sitios de KUSANAGI.
+Además, aspira a ser **"el segundo KUSANAGI"** (al estilo del kit de
+construcción de servidores KUSANAGI para acelerar WordPress, pero pensado
+para lanzar esta aplicación desde una dirección IP tras subirla, y aplicar
+de forma fácil y automática el registro de dominio y la puesta en marcha de
+HTTPS), e incluye una pestaña de **"Gestión de sitios"** que permite
+registrar y alternar entre varios destinos de conexión (para aruaru-web y
+para otros proyectos), junto con un conjunto completo de arranque desde IP,
+generación de vhost y configuración/monitorización/renovación automática de
+HTTPS (TLS).
 
 📖 Otros idiomas: [日本語](README-Japan.md) / [English](README-English.md) /
 [中文](README-Chinese.md) / [한국어](README-Korea.md) / [Español](README-Spain.md) /
@@ -26,14 +31,6 @@ forma similar al listado de sitios de KUSANAGI.
     `columns`/`rows`/`commandTag` en una tabla.
   - `registrySummary: RegistrySummaryGql` — muestra en tarjetas el resumen
     del registro de bases de datos soportadas (más de 150).
-  - `registry: [DbEntryGql!]!` — muestra en una tabla el **listado** del
-    registro de bases de datos soportadas (nombre/categoría/compatibilidad
-    de protocolo/estado/posición/puntuación/fecha de actualización).
-- **Pestaña de gestión de versiones**: permite ejecutar `currentBranch`/
-  `branches` (listado de ramas y rama actual), `log(limit)` (historial de
-  commits) y `diff(from, to)` (número de líneas añadidas/eliminadas/
-  modificadas entre ramas). Todo ello se basa en el esquema real
-  (`VcsQuery`) de `aruaru-db/crates/aruaru-graphql`.
 - Si `aruaru-server` no está en ejecución o no se puede alcanzar, se
   renderiza al instante **datos de muestra con la misma forma que el
   esquema real**, dejando claro que se trata de una "muestra sin conexión"
@@ -66,6 +63,15 @@ forma similar al listado de sitios de KUSANAGI.
 
 ## Qué no se puede hacer todavía (alcance honesto)
 
+- **Queda intencionadamente fuera de alcance profundizar en las funciones
+  de aruaru-db, como las consultas de control de versiones (ramas,
+  historial de commits, diff, etc.) o la obtención del listado detallado
+  del registro.** El objetivo de este repositorio es una herramienta de
+  operación al estilo "el segundo KUSANAGI" (arranque desde IP,
+  simplificación del registro de dominios, automatización de HTTPS), y no
+  está previsto seguir ampliando la UI de administración de la base de
+  datos más allá de las funciones mínimas de conexión a aruaru-db: la
+  ejecución de SQL y el resumen del registro.
 - Las mutaciones GraphQL (creación de ramas, fusión, crawl del registro,
   etc.) no están implementadas.
 - La autenticación, la paginación y el reintento automático en caso de
@@ -153,12 +159,9 @@ coherencia con el cambio de destino desde el navegador.
   acciones: cambio de pestañas, ejecución de SQL → renderizado del
   fallback sin conexión, registro y recarga del historial de consultas y
   su tooltip al pasar el cursor, atajo Ctrl+Enter, exportación a CSV (con
-  descarga real disparada), resumen del registro y obtención del listado
-  de bases de datos registradas, obtención en la pestaña de gestión de
-  versiones del listado de ramas, el historial de commits y el diff (todo
-  ello incluyendo el fallback sin conexión), visualización de los sitios
-  ya registrados en la pestaña de gestión de sitios, alta de un nuevo
-  sitio, rechazo de un puerto inválido, botón de prueba de conexión,
+  descarga real disparada), resumen del registro, visualización de los
+  sitios ya registrados en la pestaña de gestión de sitios, alta de un
+  nuevo sitio, rechazo de un puerto inválido, botón de prueba de conexión,
   exportación/importación en JSON (con ida y vuelta verificada) y el
   diálogo de confirmación de borrado (tanto cancelar como confirmar). No
   hay errores de JS en la consola (solo los registros de fallo de conexión

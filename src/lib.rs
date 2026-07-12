@@ -59,38 +59,6 @@ pub fn start() -> Result<(), JsValue> {
     registry_btn.set_onclick(Some(registry_closure.as_ref().unchecked_ref()));
     registry_closure.forget();
 
-    // 「登録DB一覧を取得」ボタン
-    let registry_list_btn: HtmlButtonElement = by_id("run-registry-list").dyn_into()?;
-    let registry_list_closure = Closure::<dyn FnMut(Event)>::new(move |_evt: Event| {
-        on_run_registry_list();
-    });
-    registry_list_btn.set_onclick(Some(registry_list_closure.as_ref().unchecked_ref()));
-    registry_list_closure.forget();
-
-    // 「ブランチ一覧を取得」ボタン
-    let branches_btn: HtmlButtonElement = by_id("run-branches").dyn_into()?;
-    let branches_closure = Closure::<dyn FnMut(Event)>::new(move |_evt: Event| {
-        on_run_branches();
-    });
-    branches_btn.set_onclick(Some(branches_closure.as_ref().unchecked_ref()));
-    branches_closure.forget();
-
-    // 「ログを取得」ボタン
-    let log_btn: HtmlButtonElement = by_id("run-log").dyn_into()?;
-    let log_closure = Closure::<dyn FnMut(Event)>::new(move |_evt: Event| {
-        on_run_log();
-    });
-    log_btn.set_onclick(Some(log_closure.as_ref().unchecked_ref()));
-    log_closure.forget();
-
-    // 「Diffを取得」ボタン
-    let diff_btn: HtmlButtonElement = by_id("run-diff").dyn_into()?;
-    let diff_closure = Closure::<dyn FnMut(Event)>::new(move |_evt: Event| {
-        on_run_diff();
-    });
-    diff_btn.set_onclick(Some(diff_closure.as_ref().unchecked_ref()));
-    diff_closure.forget();
-
     // 「サイトを保存」ボタン
     let save_site_btn: HtmlButtonElement = by_id("save-site").dyn_into()?;
     let save_site_closure = Closure::<dyn FnMut(Event)>::new(move |_evt: Event| {
@@ -197,7 +165,6 @@ fn show_tab(tab: &str) {
     let doc = document();
     for (id, name) in [
         ("tab-sql", "sql"),
-        ("tab-vcs", "vcs"),
         ("tab-registry", "registry"),
         ("tab-sites", "sites"),
     ] {
@@ -297,147 +264,6 @@ fn on_run_registry_summary() {
             }
         }
         set_button_busy("run-registry", false, "レジストリ集計を取得");
-    });
-}
-
-fn on_run_registry_list() {
-    let endpoint = current_endpoint();
-    set_status("登録DB一覧を取得中…");
-    set_button_busy("run-registry-list", true, "取得中…");
-    wasm_bindgen_futures::spawn_local(async move {
-        match graphql::post_graphql(&endpoint, graphql::REGISTRY_LIST_QUERY, serde_json::Value::Null).await {
-            Ok(body) => match graphql::extract_data(&body, "registry") {
-                Ok(data) => {
-                    render::render_registry_list(&data, false);
-                    set_status("実行完了(aruaru-dbから取得)。");
-                }
-                Err(e) => {
-                    render::render_registry_list_offline_sample();
-                    set_status(&format!(
-                        "サーバー応答を解釈できませんでした({e})。オフラインサンプルを表示しています。"
-                    ));
-                }
-            },
-            Err(e) => {
-                render::render_registry_list_offline_sample();
-                set_status(&format!(
-                    "aruaru-db ({endpoint}) に接続できませんでした: {e}。オフラインサンプルを表示しています。"
-                ));
-            }
-        }
-        set_button_busy("run-registry-list", false, "登録DB一覧を取得");
-    });
-}
-
-fn on_run_branches() {
-    let endpoint = current_endpoint();
-    set_status("ブランチ一覧を取得中…");
-    set_button_busy("run-branches", true, "取得中…");
-    wasm_bindgen_futures::spawn_local(async move {
-        match graphql::post_graphql(&endpoint, graphql::BRANCHES_QUERY, serde_json::Value::Null).await {
-            Ok(body) => match graphql::extract_data(&body, "branches") {
-                Ok(branches) => {
-                    let current = graphql::extract_data(&body, "currentBranch")
-                        .ok()
-                        .and_then(|v| v.as_str().map(str::to_string))
-                        .unwrap_or_default();
-                    render::render_branches(&current, &branches, false);
-                    set_status("実行完了(aruaru-dbから取得)。");
-                }
-                Err(e) => {
-                    render::render_branches_offline_sample();
-                    set_status(&format!(
-                        "サーバー応答を解釈できませんでした({e})。オフラインサンプルを表示しています。"
-                    ));
-                }
-            },
-            Err(e) => {
-                render::render_branches_offline_sample();
-                set_status(&format!(
-                    "aruaru-db ({endpoint}) に接続できませんでした: {e}。オフラインサンプルを表示しています。"
-                ));
-            }
-        }
-        set_button_busy("run-branches", false, "ブランチ一覧を取得");
-    });
-}
-
-fn on_run_log() {
-    let endpoint = current_endpoint();
-    let limit: i64 = by_id("log-limit")
-        .dyn_into::<HtmlInputElement>()
-        .map(|el| el.value())
-        .unwrap_or_default()
-        .trim()
-        .parse()
-        .unwrap_or(20);
-    set_status("コミットログを取得中…");
-    set_button_busy("run-log", true, "取得中…");
-    wasm_bindgen_futures::spawn_local(async move {
-        let variables = serde_json::json!({ "limit": limit });
-        match graphql::post_graphql(&endpoint, graphql::LOG_QUERY, variables).await {
-            Ok(body) => match graphql::extract_data(&body, "log") {
-                Ok(data) => {
-                    render::render_log(&data, false);
-                    set_status("実行完了(aruaru-dbから取得)。");
-                }
-                Err(e) => {
-                    render::render_log_offline_sample();
-                    set_status(&format!(
-                        "サーバー応答を解釈できませんでした({e})。オフラインサンプルを表示しています。"
-                    ));
-                }
-            },
-            Err(e) => {
-                render::render_log_offline_sample();
-                set_status(&format!(
-                    "aruaru-db ({endpoint}) に接続できませんでした: {e}。オフラインサンプルを表示しています。"
-                ));
-            }
-        }
-        set_button_busy("run-log", false, "ログを取得");
-    });
-}
-
-fn on_run_diff() {
-    let endpoint = current_endpoint();
-    let from = by_id("diff-from")
-        .dyn_into::<HtmlInputElement>()
-        .map(|el| el.value())
-        .unwrap_or_default();
-    let to = by_id("diff-to")
-        .dyn_into::<HtmlInputElement>()
-        .map(|el| el.value())
-        .unwrap_or_default();
-    if from.trim().is_empty() || to.trim().is_empty() {
-        set_status("from/toの両方にブランチ名を入力してください。");
-        return;
-    }
-    set_status("Diffを取得中…");
-    set_button_busy("run-diff", true, "取得中…");
-    wasm_bindgen_futures::spawn_local(async move {
-        let variables = serde_json::json!({ "from": from, "to": to });
-        match graphql::post_graphql(&endpoint, graphql::DIFF_QUERY, variables).await {
-            Ok(body) => match graphql::extract_data(&body, "diff") {
-                Ok(data) => {
-                    render::render_diff(&data, false);
-                    set_status("実行完了(aruaru-dbから取得)。");
-                }
-                Err(e) => {
-                    render::render_diff_offline_sample(&from, &to);
-                    set_status(&format!(
-                        "サーバー応答を解釈できませんでした({e})。オフラインサンプルを表示しています。"
-                    ));
-                }
-            },
-            Err(e) => {
-                render::render_diff_offline_sample(&from, &to);
-                set_status(&format!(
-                    "aruaru-db ({endpoint}) に接続できませんでした: {e}。オフラインサンプルを表示しています。"
-                ));
-            }
-        }
-        set_button_busy("run-diff", false, "Diffを取得");
     });
 }
 

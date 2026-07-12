@@ -2,12 +2,16 @@
 
 **واجهة ويب حدّية لـ aruaru-db (Rust → WebAssembly، بدون أي إطار عمل)**
 
-هذه لوحة تحكم بتبويبات تتيح من داخل المتصفح استدعاء استعلام `sql` واستعلام
+هذه لوحة تحكم بتبويبات تستدعي فعلياً من داخل المتصفح استعلام `sql` واستعلام
 `registrySummary` (تجميع سجلّ قواعد البيانات المتوافقة) اللذين تعرضهما
 `aruaru-db` (قاعدة بيانات موزّعة من نوع Git-on-SQL) عبر GraphQL (`/graphql`)،
-وعرض النتائج فعلياً. إلى جانب تنفيذ SQL وتجميع السجلّ، تضم الواجهة **تبويب
-"إدارة المواقع" الذي يتيح تسجيل عدة جهات اتصال (لأجل aruaru-web ولمشاريع
-أخرى) والتبديل بينها**، على غرار قائمة المواقع في KUSANAGI.
+وتعرض النتائج. إضافة إلى ذلك، تسعى الواجهة لأن تكون **"KUSANAGI الثانية"**
+(أداة تشغيل تشبه KUSANAGI، حزمة بناء خوادم تسريع WordPress، حيث يمكن بعد رفع
+التطبيق تشغيله من عنوان IP، وتطبيق تسجيل النطاق وتفعيل HTTPS تلقائياً
+وبسهولة)، وتضم تبويب **"إدارة المواقع"** الذي يتيح تسجيل عدة جهات اتصال (لأجل
+aruaru-web ولمشاريع أخرى) والتبديل بينها، إلى جانب مجموعة كاملة من أدوات
+التشغيل من عنوان IP، وتوليد vhost، والإعداد التلقائي لبروتوكول HTTPS (TLS)
+ومراقبته وتجديده.
 
 📖 لغات أخرى: [日本語](README-Japan.md) / [English](README-English.md) /
 [中文](README-Chinese.md) / [한국어](README-Korea.md) / [Español](README-Spain.md) /
@@ -24,14 +28,6 @@
     `columns`/`rows`/`commandTag` في جدول
   - `registrySummary: RegistrySummaryGql` — عرض تجميع سجلّ قواعد البيانات
     المتوافقة (أكثر من 150 قاعدة) في بطاقات
-  - `registry: [DbEntryGql!]!` — عرض **قائمة** بسجلّ قواعد البيانات المتوافقة
-    في جدول (الاسم/الفئة/التوافق مع البروتوكول/الحالة/الترتيب/النتيجة/تاريخ
-    التحديث)
-- **تبويب إدارة الإصدارات**: يمكن تنفيذ `currentBranch`/`branches` (قائمة
-  الفروع والفرع الحالي)، و`log(limit)` (سجلّ الالتزامات/commits)، و
-  `diff(from, to)` (عدد الإضافات/الحذوفات/التعديلات في الفرق بين الفروع).
-  جميعها مبنية على المخطط الفعلي (`VcsQuery`) في
-  `aruaru-db/crates/aruaru-graphql`.
 - في حال عدم تشغيل `aruaru-server` أو تعذّر الاتصال به، يتم عرض **بيانات
   نموذجية بنفس شكل المخطط الفعلي** فوراً، مع توضيح صريح أنها "عيّنة دون
   اتصال" (تم التحقق من هذا السلوك فعلياً في متصفح حقيقي — انظر قسم "التحقق
@@ -59,6 +55,13 @@
 
 ## ما لا يمكن فعله حالياً (بصراحة تامة)
 
+- **استعلامات إدارة الإصدارات في aruaru-db (الفروع/السجلّ/Diff وغيرها) أو
+  الحصول على قائمة تفصيلية بسجلّ قواعد البيانات — أي التعمّق في وظائف قاعدة
+  البيانات — مستبعدة من النطاق عمداً**. هدف هذا المستودع هو أداة تشغيل على
+  غرار "KUSANAGI الثانية" (تسهيل التشغيل من عنوان IP، وتبسيط تسجيل النطاق،
+  وأتمتة HTTPS)، وليس التخطيط لتوسيع واجهة إدارة قاعدة البيانات إلى ما هو
+  أبعد من الحد الأدنى من وظائف الاتصال بـ aruaru-db المتمثلة في تنفيذ SQL
+  وتجميع سجلّ قواعد البيانات.
 - عمليات GraphQL Mutation (إنشاء فروع، الدمج، زحف السجلّ، إلخ) غير منفَّذة.
 - المصادقة، وترقيم الصفحات، وإعادة المحاولة التلقائية عند حدوث خطأ غير
   منفَّذة.
@@ -75,30 +78,30 @@
 Rust فقط.
 
 ```bash
-rustup target add wasm32-unknown-unknown        # لأول مرة فقط
-cargo install wasm-bindgen-cli --version 0.2.126 # لأول مرة فقط(يجب أن يطابق إصدار Cargo.lock)
+rustup target add wasm32-unknown-unknown        # 初回のみ
+cargo install wasm-bindgen-cli --version 0.2.126 # 初回のみ(Cargo.lockのバージョンと一致させること)
 
 cargo build --target wasm32-unknown-unknown
 wasm-bindgen --target web --no-typescript --out-dir pkg \
   target/wasm32-unknown-unknown/debug/aruaru_web.wasm
 
-# قدّم الملفات عبر أي خادم ثابت وافتحها(أي خادم يفي بالغرض، مثال:)
+# 静的サーバーで配信して開く(何でもよい。例:)
 python -m http.server 8080
-# افتح http://localhost:8080/index.html في المتصفح
+# ブラウザで http://localhost:8080/index.html を開く
 ```
 
 لتجربة تشغيل `aruaru-db` فعلياً:
 
 ```bash
 cd ../aruaru-db
-cargo run -p aruaru-server -- --data ./data --raft-id 1   # يعمل GraphQL على المنفذ :4000
+cargo run -p aruaru-server -- --data ./data --raft-id 1   # :4000 に GraphQL が立つ
 ```
 
 ## التشغيل من عنوان IP
 
 ```bash
-scripts/serve.sh 0.0.0.0 8080        # الاستماع على جميع الواجهات
-scripts/serve.sh 192.168.1.50 8080   # الاستماع على عنوان IP محدد فقط
+scripts/serve.sh 0.0.0.0 8080        # 全インターフェースで待受
+scripts/serve.sh 192.168.1.50 8080   # 特定のIPアドレスのみで待受
 ```
 
 ## HTTPS وتسجيل النطاقات/النطاقات الفرعية
@@ -109,17 +112,17 @@ scripts/serve.sh 192.168.1.50 8080   # الاستماع على عنوان IP م�
 عليه مسبقاً لاستخدام aruaru-web أو لمشاريع أخرى.
 
 ```bash
-# 1. توليد vhost(لـ Nginx/Apache، مع تضمين إعادة التوجيه من HTTP إلى HTTPS) من النطاق + IP + الخلفية(backend)
+# 1. ドメイン+IP+バックエンドから vhost(Nginx/Apache、HTTP→HTTPSリダイレクト込み)を生成
 scripts/gen-vhost.sh aruaru.example.com 203.0.113.10 127.0.0.1:4000
-# وبالمثل بالنسبة للنطاقات الفرعية المخصّصة لأغراض أخرى(فقط غيّر UPSTREAM/WEBROOT)
+# 別用途のサブドメインも同様に(UPSTREAM/WEBROOTを変えるだけ)
 scripts/gen-vhost.sh tool.example.com 203.0.113.10 127.0.0.1:9000 /var/www/tool
 
-# 2. ضع ملفات الإعداد المولَّدة في مكانها وأعد التحميل(ضمن deploy/generated/، وهي مدرجة في .gitignore)
+# 2. 生成された設定ファイルを配置してリロード(deploy/generated/ 以下、.gitignore対象)
 
-# 3. الحصول على شهادة TLS(Let's Encrypt / certbot)
+# 3. TLS証明書を取得(Let's Encrypt / certbot)
 scripts/setup-tls.sh aruaru.example.com admin@example.com /var/www/aruaru.example.com
 
-# 4. تفعيل التجديد التلقائي(مرتين يومياً) + المراقبة التلقائية(مرة يومياً، لرصد اقتراب انتهاء الصلاحية)
+# 4. 自動更新(1日2回)+ 自動監視(1日1回、失効間近を検知)を有効化
 sudo deploy/systemd/install-systemd-units.sh
 ```
 
@@ -137,14 +140,12 @@ sudo deploy/systemd/install-systemd-units.sh
   عبر Playwright)، والتحقق فعلياً من خلال التفاعل المباشر مع ما يلي: التبديل
   بين التبويبات، تنفيذ SQL ← عرض البيانات الاحتياطية دون اتصال، تسجيل
   الاستعلامات في السجلّ وإعادة تحميلها وظهور تلميح عند التحويم، اختصار
-  Ctrl+Enter، تصدير CSV (مع إطلاق تنزيل فعلي)، الحصول على تجميع السجلّ وعلى
-  قائمة قواعد البيانات المسجَّلة، والحصول في تبويب إدارة الإصدارات على قائمة
-  الفروع وسجلّ الالتزامات ونتيجة Diff (بما في ذلك مسار البيانات الاحتياطية
-  دون اتصال في كل هذه الحالات)، وفي تبويب إدارة المواقع: عرض المواقع
-  المسجَّلة، إضافة موقع جديد، رفض إدخال منفذ غير صالح، زر اختبار الاتصال،
-  تصدير/استيراد JSON (تم التحقق من نجاح العملية ذهاباً وإياباً)، ومربع حوار
-  تأكيد الحذف (كلا الخيارين: الإلغاء والتنفيذ). لا توجد أي أخطاء JavaScript
-  في وحدة التحكم (console) سوى سجلات فشل الاتصال المقصودة.
+  Ctrl+Enter، تصدير CSV (مع إطلاق تنزيل فعلي)، تجميع السجلّ، وفي تبويب إدارة
+  المواقع: عرض المواقع المسجَّلة، إضافة موقع جديد، رفض إدخال منفذ غير صالح،
+  زر اختبار الاتصال، تصدير/استيراد JSON (تم التحقق من نجاح العملية ذهاباً
+  وإياباً)، ومربع حوار تأكيد الحذف (كلا الخيارين: الإلغاء والتنفيذ). لا توجد
+  أي أخطاء JavaScript في وحدة التحكم (console) سوى سجلات فشل الاتصال
+  المقصودة.
 - تم تثبيت Nginx 1.24 (الإصدار المعتمد في Ubuntu 24.04) وApache 2.4 وcertbot
   فعلياً، وتشغيل مخرجات `scripts/gen-vhost.sh` باستخدام شهادة موقّعة ذاتياً
   والتحقق عبر `curl` (إعادة التوجيه من HTTP إلى HTTPS، مسار تحدي ACME،
@@ -163,26 +164,26 @@ sudo deploy/systemd/install-systemd-units.sh
 aruaru-web/
 ├── Cargo.toml            # crate-type = ["cdylib", "rlib"]、wasm-bindgen/web-sys依存
 ├── src/
-│   ├── lib.rs             # نقطة الدخول، التبديل بين التبويبات، ربط الأحداث
-│   ├── dom.rs             # دوال مساعدة مشتركة للتعامل مع DOM(مثل تنزيل الملفات)
-│   ├── graphql.rs         # استدعاءات fetch نحو /graphql
-│   ├── render.rs          # عرض نتائج SQL وتجميع السجلّ، وإخراج CSV
-│   ├── profiles.rs        # إدارة المواقع(ملفات جهات الاتصال، الحفظ في localStorage، تصدير/استيراد JSON)
-│   ├── history.rs         # سجلّ استعلامات SQL(آخر 10 استعلامات، الحفظ في localStorage)
-│   └── shell.rs           # هيكل HTML(التبويبات والنماذج)
-├── index.html             # محمِّل يقرأ pkg/ + ملف CSS
-├── pkg/                   # نواتج wasm-bindgen(ضمن .gitignore، تُعاد توليدها عند البناء)
+│   ├── lib.rs             # エントリポイント・タブ切り替え・イベント配線
+│   ├── dom.rs             # DOM操作の共通ヘルパー(ファイルダウンロード等)
+│   ├── graphql.rs         # /graphql への fetch呼び出し
+│   ├── render.rs          # SQL結果・レジストリ集計のレンダリング、CSV出力
+│   ├── profiles.rs        # サイト管理(接続プロファイル、localStorage保存、JSON入出力)
+│   ├── history.rs         # SQLクエリ履歴(直近10件、localStorage保存)
+│   └── shell.rs           # HTMLシェル(タブ・フォーム)
+├── index.html             # pkg/ を読み込むローダー + CSS
+├── pkg/                   # wasm-bindgen生成物(.gitignore対象、ビルドで再生成)
 ├── scripts/
-│   ├── serve.sh            # تشغيل خادم تطوير يستمع من أي عنوان IP
-│   ├── gen-vhost.sh         # توليد إعدادات vhost لـ Nginx/Apache من النطاق/IP
-│   ├── setup-tls.sh         # الحصول على شهادة Let's Encrypt
-│   ├── check-tls.sh         # فحص تاريخ انتهاء صلاحية شهادة نطاق واحد
-│   └── check-all-tls.sh     # فحص تواريخ انتهاء الصلاحية لجميع النطاقات المسجَّلة دفعة واحدة
+│   ├── serve.sh            # 任意のIPアドレスから配信する開発サーバー起動
+│   ├── gen-vhost.sh         # ドメイン/IPからNginx・Apache vhostを生成
+│   ├── setup-tls.sh         # Let's Encrypt証明書の取得
+│   ├── check-tls.sh         # 1ドメインの証明書有効期限チェック
+│   └── check-all-tls.sh     # 登録済み全ドメインの有効期限を一括チェック
 ├── deploy/
 │   ├── nginx/vhost.conf.template
 │   ├── apache/vhost.conf.template
-│   ├── systemd/             # مجموعة مؤقّتات التجديد التلقائي(renew) والمراقبة التلقائية(monitor)
-│   └── generated/           # مخرجات gen-vhost.sh(ضمن .gitignore)
+│   ├── systemd/             # 自動更新(renew)・自動監視(monitor)タイマー一式
+│   └── generated/           # gen-vhost.shの出力(.gitignore対象)
 └── CLAUDE.md
 ```
 

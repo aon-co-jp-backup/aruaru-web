@@ -9,7 +9,6 @@ pub const SHELL_HTML: &str = r#"
 
 <nav class="tabs">
   <button class="tab-btn" data-tab="sql">SQL実行</button>
-  <button class="tab-btn" data-tab="vcs">バージョン管理</button>
   <button class="tab-btn" data-tab="registry">レジストリ集計</button>
   <button class="tab-btn" data-tab="sites">サイト管理</button>
 </nav>
@@ -34,46 +33,11 @@ pub const SHELL_HTML: &str = r#"
   </section>
 </section>
 
-<section id="tab-vcs" class="tab-panel">
-  <section>
-    <h2>ブランチ</h2>
-    <p class="muted">現在のブランチと、登録済みブランチの一覧を取得します。</p>
-    <div class="buttons">
-      <button id="run-branches">ブランチ一覧を取得</button>
-    </div>
-  </section>
-  <section>
-    <h2>コミットログ</h2>
-    <label for="log-limit">取得件数</label>
-    <input id="log-limit" type="text" value="20" />
-    <div class="buttons">
-      <button id="run-log">ログを取得</button>
-    </div>
-  </section>
-  <section>
-    <h2>Diff(ブランチ間の差分)</h2>
-    <div class="form-grid">
-      <div>
-        <label for="diff-from">from(ブランチ名)</label>
-        <input id="diff-from" type="text" placeholder="main" />
-      </div>
-      <div>
-        <label for="diff-to">to(ブランチ名)</label>
-        <input id="diff-to" type="text" placeholder="feature/x" />
-      </div>
-    </div>
-    <div class="buttons">
-      <button id="run-diff">Diffを取得</button>
-    </div>
-  </section>
-</section>
-
 <section id="tab-registry" class="tab-panel">
   <section>
-    <p class="muted">対応DBレジストリ(150件超)の集計をカード表示、または一覧をテーブル表示します。</p>
+    <p class="muted">対応DBレジストリ(150件超)の集計をカード表示します。</p>
     <div class="buttons">
       <button id="run-registry">レジストリ集計を取得</button>
-      <button id="run-registry-list" class="secondary">登録DB一覧を取得</button>
     </div>
   </section>
 </section>

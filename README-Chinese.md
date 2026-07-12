@@ -2,11 +2,14 @@
 
 **面向 aruaru-db 的最小化 Web UI(Rust → WebAssembly,不使用框架)**
 
-`aruaru-db`(分布式 Git-on-SQL 数据库)通过 GraphQL(`/graphql`)对外提供
-`sql` 查询与 `registrySummary`(受支持数据库注册表汇总)接口,本项目是一个
-标签式仪表盘,可从浏览器中实际调用这些接口并显示结果。除 SQL 执行、注册表
-汇总外,还提供一个类似 KUSANAGI 站点列表的**「站点管理」标签页**,可以
-注册并切换多个连接目标(供 aruaru-web 自身使用、也可供其他项目使用)。
+本项目是一个标签式仪表盘,可从浏览器中实际调用 `aruaru-db`(分布式
+Git-on-SQL 数据库)通过 GraphQL(`/graphql`)对外提供的 `sql` 查询与
+`registrySummary`(受支持数据库注册表汇总)接口并显示结果。除此之外,
+本项目还以成为**「第二个 KUSANAGI」**(类似 WordPress 高速化服务器构建
+套件 KUSANAGI 那样,在应用上传后即可从 IP 地址启动,并能轻松自动完成
+域名登记・HTTPS 化的运维工具)为目标,提供了可注册并切换多个连接目标
+(供 aruaru-web 自身使用・也可供其他项目使用)的「站点管理」标签页,以及
+IP 地址启动・vhost 生成・HTTPS(TLS)自动配置/监控/更新的完整功能集。
 
 📖 其他语言: [日本語](README-Japan.md) / [English](README-English.md) /
 [中文](README-Chinese.md) / [한국어](README-Korea.md) / [Español](README-Spain.md) /
@@ -23,12 +26,6 @@
     `columns`/`rows`/`commandTag`
   - `registrySummary: RegistrySummaryGql` —— 以卡片形式显示受支持数据库
     注册表(超过150条)的汇总信息
-  - `registry: [DbEntryGql!]!` —— 以表格形式显示受支持数据库注册表的
-    **完整列表**(名称/分类/协议兼容性/状态/排名/评分/更新时间)
-- **版本管理标签页**: 可以执行 `currentBranch`/`branches`(分支列表・当前
-  分支)、`log(limit)`(提交日志)、`diff(from, to)`(分支间差异的新增/删除/
-  修改数量)等查询。均基于 `aruaru-db/crates/aruaru-graphql` 的真实 schema
-  (`VcsQuery`)实现。
 - 当 `aruaru-server` 未启动或无法连接时,会**当场渲染与真实 schema 结构相同
   的示例数据**,并明确提示这是"离线示例数据"(该行为已在真实浏览器中验证 ——
   详见下文"验证情况")。
@@ -51,6 +48,11 @@
 
 ## 目前尚未实现的功能(如实说明范围)
 
+- **aruaru-db 的版本管理相关查询(分支/日志/Diff 等)以及注册表详细列表的
+  获取等深入 DB 功能层面的方向,均属于有意排除在范围之外**。本仓库的目标是
+  成为「第二个 KUSANAGI」式的运维工具(IP 地址启动・简化域名登记・HTTPS
+  自动化),因此今后也不计划在 SQL 执行・注册表汇总这一最小限度的
+  aruaru-db 连接功能之上,进一步扩展 DB 管理 UI。
 - GraphQL Mutation(创建分支、合并、注册表 crawl 等)尚未实现。
 - 认证、分页、错误时的自动重试尚未实现。
 - 不提供类似 Tauri 的原生应用体验(仅为浏览器中运行的 WASM)。
@@ -124,11 +126,10 @@ sudo deploy/systemd/install-systemd-units.sh
   `pkg/aruaru_web_bg.wasm`,并在真实浏览器(Chromium,经由 Playwright)中
   加载 `index.html`,实际操作并确认了以下内容: 标签切换、执行 SQL →
   渲染离线回退数据、查询历史的记录・重新载入・悬停提示、Ctrl+Enter 快捷键、
-  CSV导出(实际触发下载)、注册表汇总与已注册数据库列表的获取、版本管理
-  标签页中分支列表・提交日志・Diff 的获取(均含离线回退)、站点管理标签页中
-  已注册站点的显示・新增・拒绝非法端口输入・连接测试按钮・JSON导出/导入
-  (已确认往返一致)・删除确认对话框(取消与执行两种情况均已确认)。控制台
-  中没有 JS 错误(仅有预期内的连接失败日志)。
+  CSV导出(实际触发下载)、注册表汇总、站点管理标签页中已注册站点的显示・
+  新增・拒绝非法端口输入・连接测试按钮・JSON导出/导入(已确认往返一致)・
+  删除确认对话框(取消与执行两种情况均已确认)。控制台中没有 JS 错误
+  (仅有预期内的连接失败日志)。
 - 实际安装了 Nginx 1.24(Ubuntu 24.04 标准版)・Apache 2.4・certbot,使用
   自签名证书实际启动 `scripts/gen-vhost.sh` 的生成物,并通过 `curl` 验证
   (HTTP→HTTPS 重定向、ACME challenge 路径、`/graphql` 反向代理);对实际
