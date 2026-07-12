@@ -25,6 +25,14 @@ come l'elenco dei siti di KUSANAGI, permette di registrare e alternare tra
     `columns`/`rows`/`commandTag` in una tabella
   - `registrySummary: RegistrySummaryGql` — mostra in schede riepilogative
     l'aggregato del registro dei database supportati (oltre 150 voci)
+  - `registry: [DbEntryGql!]!` — mostra in una tabella l'**elenco** del
+    registro dei database supportati (nome/categoria/compatibilità del wire
+    protocol/stato/posizione in classifica/punteggio/data di aggiornamento)
+- **Scheda "Gestione versioni"**: consente di eseguire `currentBranch`/
+  `branches` (elenco branch e branch corrente), `log(limit)` (log dei
+  commit) e `diff(from, to)` (numero di aggiunte/rimozioni/modifiche tra
+  branch). Tutte si basano sullo schema reale (`VcsQuery`) di
+  `aruaru-db/crates/aruaru-graphql`.
 - Se `aruaru-server` non è avviato o non è raggiungibile, viene disegnato al
   volo un **set di dati di esempio con la stessa forma dello schema reale**,
   indicando chiaramente che si tratta di un "campione offline" (comportamento
@@ -143,13 +151,30 @@ destinazione effettuato dal browser.
   SQL con conseguente rendering di fallback offline, la registrazione/
   ricarica nella cronologia delle query e il tooltip al passaggio del
   mouse, la scorciatoia Ctrl+Invio, l'esportazione CSV (con avvio effettivo
-  del download), l'aggregazione del registro, e nella scheda "Gestione
-  siti": la visualizzazione dei siti registrati, l'aggiunta di un nuovo
-  sito, il rifiuto di una porta non valida, il pulsante di test di
-  connessione, l'esportazione/importazione JSON (verificata in andata e
-  ritorno) e la finestra di conferma dell'eliminazione (sia annullamento
-  sia conferma). Nessun errore JS in console (solo i log di fallimento di
-  connessione attesi).
+  del download), l'aggregazione del registro e il recupero dell'elenco dei
+  DB registrati, nella scheda "Gestione versioni" l'ottenimento
+  dell'elenco branch, del log dei commit e del Diff (in tutti i casi con
+  fallback offline incluso), e nella scheda "Gestione siti": la
+  visualizzazione dei siti registrati, l'aggiunta di un nuovo sito, il
+  rifiuto di una porta non valida, il pulsante di test di connessione,
+  l'esportazione/importazione JSON (verificata in andata e ritorno) e la
+  finestra di conferma dell'eliminazione (sia annullamento sia conferma).
+  Nessun errore JS in console (solo i log di fallimento di connessione
+  attesi).
+- Sono stati effettivamente installati Nginx 1.24 (standard su Ubuntu
+  24.04), Apache 2.4 e certbot; i file generati da `scripts/gen-vhost.sh`
+  sono stati avviati realmente con un certificato autofirmato e verificati
+  con `curl` (redirect HTTP→HTTPS, percorso della ACME challenge, reverse
+  proxy verso `/graphql`); `scripts/check-tls.sh` è stato eseguito contro
+  un server HTTPS reale, verificando tutti e tre gli stati WARN/healthy/
+  ERROR; `deploy/systemd/*` è stato verificato con `systemd-analyze verify`
+  (zero errori). Durante questo processo è stato individuato e corretto un
+  bug reale nel template del vhost Nginx (`http2 on;` genera un errore di
+  sintassi su Nginx 1.24). L'emissione effettiva di un certificato Let's
+  Encrypt tramite certbot (autenticazione ACME) non è stata verificata,
+  poiché non è disponibile un dominio pubblico e a causa di
+  un'incompatibilità ABI di Python nell'ambiente di verifica (per i
+  dettagli vedi CLAUDE.md).
 
 ## Struttura
 

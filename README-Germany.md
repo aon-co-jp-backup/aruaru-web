@@ -26,6 +26,14 @@ per Klick wechseln lassen**.
     zeigt `columns`/`rows`/`commandTag` als Tabelle an
   - `registrySummary: RegistrySummaryGql` — zeigt die Zusammenfassung der
     Registry unterstützter Datenbanken (über 150 Einträge) als Karten an
+  - `registry: [DbEntryGql!]!` — zeigt die **Liste** der Registry
+    unterstützter Datenbanken als Tabelle an (Name/Kategorie/
+    Wire-Kompatibilität/Status/Rang/Score/Aktualisierungsdatum)
+- **Versionsverwaltung-Tab**: Führt `currentBranch`/`branches` (Liste der
+  Branches sowie der aktuelle Branch), `log(limit)` (Commit-Log) und
+  `diff(from, to)` (Anzahl der zwischen zwei Branches hinzugefügten,
+  gelöschten und geänderten Zeilen) aus. All dies basiert auf dem echten
+  Schema (`VcsQuery`) von `aruaru-db/crates/aruaru-graphql`.
 - Ist `aruaru-server` nicht gestartet oder nicht erreichbar, rendert die Seite
   sofort **Beispieldaten in exakt der Form des echten Schemas** und
   kennzeichnet sie deutlich als "Offline-Beispiel" (dieses Verhalten wurde in
@@ -144,13 +152,29 @@ stimmen die Ziele mit der Verbindungsauswahl im Browser überein.
   Klick geprüft: Tab-Wechsel, SQL-Ausführung mit anschließendem Rendering des
   Offline-Fallbacks, Aufzeichnung und erneutes Laden aus dem Query-Verlauf
   samt Tooltip beim Hovern, die Ctrl+Enter-Tastenkombination, der CSV-Export
-  (mit tatsächlich ausgelöstem Download), die Registry-Zusammenfassung, die
-  Anzeige registrierter Sites im Sitenverwaltung-Tab, das Anlegen neuer
-  Sites, die Ablehnung ungültiger Porteingaben, die "Verbindungstest"-Taste,
-  JSON-Export/-Import (Roundtrip verifiziert) sowie der Bestätigungsdialog
-  vor dem Löschen (sowohl Abbrechen als auch Ausführen). Es traten keine
-  JS-Fehler in der Konsole auf (nur die beabsichtigten Protokollmeldungen zu
-  fehlgeschlagenen Verbindungen).
+  (mit tatsächlich ausgelöstem Download), das Abrufen der
+  Registry-Zusammenfassung und der Liste registrierter Datenbanken, das
+  Abrufen von Branch-Liste, Commit-Log und Diff im Versionsverwaltung-Tab
+  (jeweils einschließlich des Offline-Fallbacks), die Anzeige registrierter
+  Sites im Sitenverwaltung-Tab, das Anlegen neuer Sites, die Ablehnung
+  ungültiger Porteingaben, die "Verbindungstest"-Taste, JSON-Export/-Import
+  (Roundtrip verifiziert) sowie der Bestätigungsdialog vor dem Löschen
+  (sowohl Abbrechen als auch Ausführen). Es traten keine JS-Fehler in der
+  Konsole auf (nur die beabsichtigten Protokollmeldungen zu fehlgeschlagenen
+  Verbindungen).
+- Nginx 1.24 (Standard unter Ubuntu 24.04), Apache 2.4 und certbot wurden
+  tatsächlich installiert; die von `scripts/gen-vhost.sh` erzeugten
+  Konfigurationen wurden mit einem selbstsignierten Zertifikat real
+  gestartet und per `curl` geprüft (HTTP→HTTPS-Weiterleitung,
+  ACME-Challenge-Pfad, Reverse-Proxy auf `/graphql`). `scripts/check-tls.sh`
+  wurde gegen den tatsächlich laufenden HTTPS-Server ausgeführt, wobei alle
+  drei Zustände WARN/healthy/ERROR bestätigt wurden, und `deploy/systemd/*`
+  wurde mit `systemd-analyze verify` geprüft (0 Fehler). Dabei wurde ein
+  echter Fehler in der Nginx-vhost-Vorlage gefunden und behoben (`http2
+  on;` führt unter Nginx 1.24 zu einem Syntaxfehler). Der tatsächliche
+  Zertifikatsbezug bei Let's Encrypt über certbot (ACME-Verifizierung)
+  konnte mangels öffentlicher Domain und wegen einer Python-ABI-Inkompatibilität
+  in der Testumgebung nicht verifiziert werden (Details siehe CLAUDE.md).
 
 ## Struktur
 

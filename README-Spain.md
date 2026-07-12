@@ -26,6 +26,14 @@ forma similar al listado de sitios de KUSANAGI.
     `columns`/`rows`/`commandTag` en una tabla.
   - `registrySummary: RegistrySummaryGql` — muestra en tarjetas el resumen
     del registro de bases de datos soportadas (más de 150).
+  - `registry: [DbEntryGql!]!` — muestra en una tabla el **listado** del
+    registro de bases de datos soportadas (nombre/categoría/compatibilidad
+    de protocolo/estado/posición/puntuación/fecha de actualización).
+- **Pestaña de gestión de versiones**: permite ejecutar `currentBranch`/
+  `branches` (listado de ramas y rama actual), `log(limit)` (historial de
+  commits) y `diff(from, to)` (número de líneas añadidas/eliminadas/
+  modificadas entre ramas). Todo ello se basa en el esquema real
+  (`VcsQuery`) de `aruaru-db/crates/aruaru-graphql`.
 - Si `aruaru-server` no está en ejecución o no se puede alcanzar, se
   renderiza al instante **datos de muestra con la misma forma que el
   esquema real**, dejando claro que se trata de una "muestra sin conexión"
@@ -145,13 +153,29 @@ coherencia con el cambio de destino desde el navegador.
   acciones: cambio de pestañas, ejecución de SQL → renderizado del
   fallback sin conexión, registro y recarga del historial de consultas y
   su tooltip al pasar el cursor, atajo Ctrl+Enter, exportación a CSV (con
-  descarga real disparada), resumen del registro, visualización de los
-  sitios ya registrados en la pestaña de gestión de sitios, alta de un
-  nuevo sitio, rechazo de un puerto inválido, botón de prueba de conexión,
+  descarga real disparada), resumen del registro y obtención del listado
+  de bases de datos registradas, obtención en la pestaña de gestión de
+  versiones del listado de ramas, el historial de commits y el diff (todo
+  ello incluyendo el fallback sin conexión), visualización de los sitios
+  ya registrados en la pestaña de gestión de sitios, alta de un nuevo
+  sitio, rechazo de un puerto inválido, botón de prueba de conexión,
   exportación/importación en JSON (con ida y vuelta verificada) y el
   diálogo de confirmación de borrado (tanto cancelar como confirmar). No
   hay errores de JS en la consola (solo los registros de fallo de conexión
   esperados).
+- Se instalaron realmente Nginx 1.24 (versión estándar de Ubuntu 24.04),
+  Apache 2.4 y certbot, y se puso en marcha lo generado por
+  `scripts/gen-vhost.sh` con un certificado autofirmado, verificándolo con
+  `curl` (redirección HTTP→HTTPS, ruta de desafío ACME, proxy inverso hacia
+  `/graphql`); se ejecutó `scripts/check-tls.sh` contra un servidor HTTPS
+  real, comprobando los tres estados WARN/healthy/ERROR; y se verificaron
+  `deploy/systemd/*` con `systemd-analyze verify` (0 errores). En este
+  proceso se descubrió y corrigió un error real en la plantilla de vhost
+  de Nginx (`http2 on;` provoca un error de sintaxis en Nginx 1.24). La
+  emisión real de un certificado de Let's Encrypt mediante certbot
+  (autenticación ACME) no se ha podido verificar, por no disponer de un
+  dominio público y por una incompatibilidad de ABI de Python en el
+  entorno de pruebas (más detalles en CLAUDE.md).
 
 ## Estructura
 

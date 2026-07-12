@@ -28,6 +28,15 @@ projets)**.
   - `registrySummary: RegistrySummaryGql` — affiche sous forme de cartes
     l'agrégat du registre des bases de données supportées (plus de 150
     entrées)
+  - `registry: [DbEntryGql!]!` — affiche sous forme de tableau la **liste**
+    du registre des bases de données supportées (nom / catégorie /
+    compatibilité de protocole / état / rang / score / date de mise à jour)
+- **Onglet « Gestion de versions »** : permet d'exécuter `currentBranch`/
+  `branches` (liste des branches et branche courante), `log(limit)`
+  (journal des commits) et `diff(from, to)` (différence entre deux
+  branches : nombre de lignes ajoutées / supprimées / modifiées). Ces
+  trois requêtes s'appuient sur le schéma réel `VcsQuery` de
+  `aruaru-db/crates/aruaru-graphql`.
 - Si `aruaru-server` n'est pas démarré ou n'est pas joignable, l'UI affiche
   immédiatement des **données d'exemple ayant exactement la forme du schéma
   réel**, avec une mention explicite indiquant qu'il s'agit d'un
@@ -151,12 +160,30 @@ navigateur.
   affichage du repli hors ligne, enregistrement dans l'historique des
   requêtes → rechargement → infobulle au survol, raccourci Ctrl+Entrée,
   export CSV (déclenchement réel du téléchargement), agrégation du
-  registre, affichage des sites enregistrés dans l'onglet « Gestion des
-  sites », ajout d'un nouveau site, rejet d'un numéro de port invalide,
-  bouton de test de connexion, export/import JSON (aller-retour vérifié),
-  boîte de dialogue de confirmation de suppression (annulation et
-  validation testées toutes les deux). Aucune erreur JS dans la console
-  (seuls les journaux d'échec de connexion attendus apparaissent).
+  registre et récupération de la liste des bases de données enregistrées,
+  récupération dans l'onglet « Gestion de versions » de la liste des
+  branches, du journal des commits et du diff (y compris le repli hors
+  ligne dans chaque cas), affichage des sites enregistrés dans l'onglet
+  « Gestion des sites », ajout d'un nouveau site, rejet d'un numéro de
+  port invalide, bouton de test de connexion, export/import JSON
+  (aller-retour vérifié), boîte de dialogue de confirmation de suppression
+  (annulation et validation testées toutes les deux). Aucune erreur JS
+  dans la console (seuls les journaux d'échec de connexion attendus
+  apparaissent).
+- Nginx 1.24 (la version standard d'Ubuntu 24.04), Apache 2.4 et certbot
+  ont été réellement installés ; les fichiers générés par
+  `scripts/gen-vhost.sh` ont été démarrés avec un certificat auto-signé et
+  vérifiés via `curl` (redirection HTTP→HTTPS, chemin du challenge ACME,
+  proxy inverse vers `/graphql`), `scripts/check-tls.sh` a été exécuté
+  contre un vrai serveur HTTPS pour confirmer les trois états WARN /
+  healthy / ERROR, et `deploy/systemd/*` a été vérifié avec
+  `systemd-analyze verify` (zéro erreur). Ce processus a permis de
+  découvrir et corriger un véritable bug dans le modèle de vhost Nginx
+  (`http2 on;` provoque une erreur de syntaxe sous Nginx 1.24). En
+  revanche, l'émission réelle d'un certificat Let's Encrypt par certbot
+  (authentification ACME) n'a pas pu être vérifiée, faute de domaine
+  public disponible et en raison d'une incompatibilité d'ABI Python dans
+  l'environnement de test (voir CLAUDE.md pour le détail).
 
 ## Structure
 

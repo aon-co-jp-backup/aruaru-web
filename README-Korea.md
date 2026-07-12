@@ -24,6 +24,12 @@
     테이블로 표시
   - `registrySummary: RegistrySummaryGql` — 지원 DB 레지스트리(150건 이상)의
     집계를 카드 형태로 표시
+  - `registry: [DbEntryGql!]!` — 지원 DB 레지스트리의 **목록**을 테이블로 표시
+    (이름/카테고리/와이어 호환성/상태/순위/점수/갱신 일시)
+- **버전 관리 탭**: `currentBranch`/`branches`(브랜치 목록・현재 브랜치),
+  `log(limit)`(커밋 로그), `diff(from, to)`(브랜치 간 차이의 추가/삭제/변경
+  건수)를 실행할 수 있다. 모두 `aruaru-db/crates/aruaru-graphql`의 실제
+  스키마(`VcsQuery`)에 기반한다.
 - `aruaru-server`가 실행되지 않았거나 연결할 수 없는 경우, **실제 스키마와
   동일한 형태의 샘플 데이터**를 즉시 렌더링하고 "오프라인 샘플"임을 명시한다
   (이 동작은 실제 브라우저에서 검증 완료 — 아래 "동작 확인" 참고).
@@ -120,15 +126,25 @@ sudo deploy/systemd/install-systemd-units.sh
 
 - `cargo check --target wasm32-unknown-unknown` / `cargo build --target wasm32-unknown-unknown`
   모두 성공(경고 0건).
-- `wasm-bindgen --target web`으로 `pkg/aruaru_web.js` / `pkg/aruaru_web_bg.wasm`을 생성하고,
+- `wasm-bindgen --target web`로 `pkg/aruaru_web.js` / `pkg/aruaru_web_bg.wasm`을 생성하고,
   실제 브라우저(Chromium, Playwright 경유)에서 `index.html`을 불러와 다음을 실제로
   조작하여 확인 완료: 탭 전환, SQL 실행→오프라인 폴백 렌더링, 쿼리
   이력에 기록・다시 불러오기・마우스 오버 시 툴팁, Ctrl+Enter 단축키,
-  CSV 내보내기(실제 다운로드 발생), 레지스트리 집계, 사이트 관리 탭에서의
-  등록된 사이트 표시・신규 추가・잘못된 포트 입력 거부・연결 테스트 버튼・
-  JSON 내보내기/가져오기(라운드트립 확인 완료)・삭제 확인 대화상자
-  (취소/실행 양쪽 모두). 콘솔상의 JS 오류는 없음(의도된 접속 실패 로그만
-  발생).
+  CSV 내보내기(실제 다운로드 발생), 레지스트리 집계・등록 DB 목록 조회,
+  버전 관리 탭에서의 브랜치 목록・커밋 로그・Diff 조회(모두 오프라인
+  폴백 포함), 사이트 관리 탭에서의 등록된 사이트 표시・신규 추가・잘못된
+  포트 입력 거부・연결 테스트 버튼・JSON 내보내기/가져오기(라운드트립
+  확인 완료)・삭제 확인 대화상자(취소/실행 양쪽 모두). 콘솔상의 JS 오류는
+  없음(의도된 접속 실패 로그만 발생).
+- Nginx 1.24(Ubuntu 24.04 표준)・Apache 2.4・certbot을 실제로 설치하여,
+  `scripts/gen-vhost.sh`의 생성물을 자체 서명 인증서로 실제 구동・`curl` 검증
+  (HTTP→HTTPS 리다이렉트, ACME challenge 경로, `/graphql` 리버스 프록시),
+  `scripts/check-tls.sh`를 실제 HTTPS 서버에 대해 실행하여 WARN/healthy/
+  ERROR 3가지 상태를 확인, `deploy/systemd/*`를 `systemd-analyze verify`로
+  검증(오류 0건). 이 과정에서 Nginx vhost 템플릿의 실제 버그(`http2 on;`가
+  Nginx 1.24에서 구문 오류가 되는 문제)를 발견・수정 완료. 실제 certbot에
+  의한 Let's Encrypt 발급(ACME 인증)은 퍼블릭 도메인이 없다는 점과 검증
+  환경의 Python ABI 불일치로 인해 미검증(자세한 내용은 CLAUDE.md 참고).
 
 ## 구성
 

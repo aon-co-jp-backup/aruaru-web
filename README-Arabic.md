@@ -1,6 +1,6 @@
 # aruaru-web
 
-**واجهة ويب حدّية لـ aruaru-db (Rust ← WebAssembly، بدون أي إطار عمل)**
+**واجهة ويب حدّية لـ aruaru-db (Rust → WebAssembly، بدون أي إطار عمل)**
 
 هذه لوحة تحكم بتبويبات تتيح من داخل المتصفح استدعاء استعلام `sql` واستعلام
 `registrySummary` (تجميع سجلّ قواعد البيانات المتوافقة) اللذين تعرضهما
@@ -24,6 +24,14 @@
     `columns`/`rows`/`commandTag` في جدول
   - `registrySummary: RegistrySummaryGql` — عرض تجميع سجلّ قواعد البيانات
     المتوافقة (أكثر من 150 قاعدة) في بطاقات
+  - `registry: [DbEntryGql!]!` — عرض **قائمة** بسجلّ قواعد البيانات المتوافقة
+    في جدول (الاسم/الفئة/التوافق مع البروتوكول/الحالة/الترتيب/النتيجة/تاريخ
+    التحديث)
+- **تبويب إدارة الإصدارات**: يمكن تنفيذ `currentBranch`/`branches` (قائمة
+  الفروع والفرع الحالي)، و`log(limit)` (سجلّ الالتزامات/commits)، و
+  `diff(from, to)` (عدد الإضافات/الحذوفات/التعديلات في الفرق بين الفروع).
+  جميعها مبنية على المخطط الفعلي (`VcsQuery`) في
+  `aruaru-db/crates/aruaru-graphql`.
 - في حال عدم تشغيل `aruaru-server` أو تعذّر الاتصال به، يتم عرض **بيانات
   نموذجية بنفس شكل المخطط الفعلي** فوراً، مع توضيح صريح أنها "عيّنة دون
   اتصال" (تم التحقق من هذا السلوك فعلياً في متصفح حقيقي — انظر قسم "التحقق
@@ -67,30 +75,30 @@
 Rust فقط.
 
 ```bash
-rustup target add wasm32-unknown-unknown        # 初回のみ
-cargo install wasm-bindgen-cli --version 0.2.126 # 初回のみ(Cargo.lockのバージョンと一致させること)
+rustup target add wasm32-unknown-unknown        # لأول مرة فقط
+cargo install wasm-bindgen-cli --version 0.2.126 # لأول مرة فقط(يجب أن يطابق إصدار Cargo.lock)
 
 cargo build --target wasm32-unknown-unknown
 wasm-bindgen --target web --no-typescript --out-dir pkg \
   target/wasm32-unknown-unknown/debug/aruaru_web.wasm
 
-# 静的サーバーで配信して開く(何でもよい。例:)
+# قدّم الملفات عبر أي خادم ثابت وافتحها(أي خادم يفي بالغرض، مثال:)
 python -m http.server 8080
-# ブラウザで http://localhost:8080/index.html を開く
+# افتح http://localhost:8080/index.html في المتصفح
 ```
 
 لتجربة تشغيل `aruaru-db` فعلياً:
 
 ```bash
 cd ../aruaru-db
-cargo run -p aruaru-server -- --data ./data --raft-id 1   # :4000 に GraphQL が立つ
+cargo run -p aruaru-server -- --data ./data --raft-id 1   # يعمل GraphQL على المنفذ :4000
 ```
 
 ## التشغيل من عنوان IP
 
 ```bash
-scripts/serve.sh 0.0.0.0 8080        # 全インターフェースで待受
-scripts/serve.sh 192.168.1.50 8080   # 特定のIPアドレスのみで待受
+scripts/serve.sh 0.0.0.0 8080        # الاستماع على جميع الواجهات
+scripts/serve.sh 192.168.1.50 8080   # الاستماع على عنوان IP محدد فقط
 ```
 
 ## HTTPS وتسجيل النطاقات/النطاقات الفرعية
@@ -101,17 +109,17 @@ scripts/serve.sh 192.168.1.50 8080   # 特定のIPアドレスのみで待受
 عليه مسبقاً لاستخدام aruaru-web أو لمشاريع أخرى.
 
 ```bash
-# 1. ドメイン+IP+バックエンドから vhost(Nginx/Apache、HTTP→HTTPSリダイレクト込み)を生成
+# 1. توليد vhost(لـ Nginx/Apache، مع تضمين إعادة التوجيه من HTTP إلى HTTPS) من النطاق + IP + الخلفية(backend)
 scripts/gen-vhost.sh aruaru.example.com 203.0.113.10 127.0.0.1:4000
-# 別用途のサブドメインも同様に(UPSTREAM/WEBROOTを変えるだけ)
+# وبالمثل بالنسبة للنطاقات الفرعية المخصّصة لأغراض أخرى(فقط غيّر UPSTREAM/WEBROOT)
 scripts/gen-vhost.sh tool.example.com 203.0.113.10 127.0.0.1:9000 /var/www/tool
 
-# 2. 生成された設定ファイルを配置してリロード(deploy/generated/ 以下、.gitignore対象)
+# 2. ضع ملفات الإعداد المولَّدة في مكانها وأعد التحميل(ضمن deploy/generated/، وهي مدرجة في .gitignore)
 
-# 3. TLS証明書を取得(Let's Encrypt / certbot)
+# 3. الحصول على شهادة TLS(Let's Encrypt / certbot)
 scripts/setup-tls.sh aruaru.example.com admin@example.com /var/www/aruaru.example.com
 
-# 4. 自動更新(1日2回)+ 自動監視(1日1回、失効間近を検知)を有効化
+# 4. تفعيل التجديد التلقائي(مرتين يومياً) + المراقبة التلقائية(مرة يومياً، لرصد اقتراب انتهاء الصلاحية)
 sudo deploy/systemd/install-systemd-units.sh
 ```
 
@@ -129,12 +137,25 @@ sudo deploy/systemd/install-systemd-units.sh
   عبر Playwright)، والتحقق فعلياً من خلال التفاعل المباشر مع ما يلي: التبديل
   بين التبويبات، تنفيذ SQL ← عرض البيانات الاحتياطية دون اتصال، تسجيل
   الاستعلامات في السجلّ وإعادة تحميلها وظهور تلميح عند التحويم، اختصار
-  Ctrl+Enter، تصدير CSV (مع إطلاق تنزيل فعلي)، تجميع السجلّ، وفي تبويب إدارة
-  المواقع: عرض المواقع المسجَّلة، إضافة موقع جديد، رفض إدخال منفذ غير صالح،
-  زر اختبار الاتصال، تصدير/استيراد JSON (تم التحقق من نجاح العملية ذهاباً
-  وإياباً)، ومربع حوار تأكيد الحذف (كلا الخيارين: الإلغاء والتنفيذ). لا توجد
-  أي أخطاء JavaScript في وحدة التحكم (console) سوى سجلات فشل الاتصال
-  المقصودة.
+  Ctrl+Enter، تصدير CSV (مع إطلاق تنزيل فعلي)، الحصول على تجميع السجلّ وعلى
+  قائمة قواعد البيانات المسجَّلة، والحصول في تبويب إدارة الإصدارات على قائمة
+  الفروع وسجلّ الالتزامات ونتيجة Diff (بما في ذلك مسار البيانات الاحتياطية
+  دون اتصال في كل هذه الحالات)، وفي تبويب إدارة المواقع: عرض المواقع
+  المسجَّلة، إضافة موقع جديد، رفض إدخال منفذ غير صالح، زر اختبار الاتصال،
+  تصدير/استيراد JSON (تم التحقق من نجاح العملية ذهاباً وإياباً)، ومربع حوار
+  تأكيد الحذف (كلا الخيارين: الإلغاء والتنفيذ). لا توجد أي أخطاء JavaScript
+  في وحدة التحكم (console) سوى سجلات فشل الاتصال المقصودة.
+- تم تثبيت Nginx 1.24 (الإصدار المعتمد في Ubuntu 24.04) وApache 2.4 وcertbot
+  فعلياً، وتشغيل مخرجات `scripts/gen-vhost.sh` باستخدام شهادة موقّعة ذاتياً
+  والتحقق عبر `curl` (إعادة التوجيه من HTTP إلى HTTPS، مسار تحدي ACME،
+  والوكيل العكسي (reverse proxy) نحو `/graphql`)، وتشغيل `scripts/check-tls.sh`
+  على خادم HTTPS فعلي والتأكد من الحالات الثلاث WARN/healthy/ERROR، والتحقق
+  من `deploy/systemd/*` عبر `systemd-analyze verify` (بدون أي أخطاء). خلال
+  هذه العملية تم اكتشاف وإصلاح خطأ فعلي في قالب vhost الخاص بـ Nginx (كانت
+  `http2 on;` تسبب خطأ نحوياً في Nginx 1.24). أما الحصول الفعلي على شهادة
+  Let's Encrypt عبر certbot (مصادقة ACME) فلم يُتحقق منه بسبب عدم توفر نطاق
+  عام (public domain) وعدم توافق إصدارات Python ABI في بيئة الاختبار
+  (للتفاصيل انظر CLAUDE.md).
 
 ## البنية
 

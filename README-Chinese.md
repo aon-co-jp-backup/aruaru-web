@@ -23,6 +23,12 @@
     `columns`/`rows`/`commandTag`
   - `registrySummary: RegistrySummaryGql` —— 以卡片形式显示受支持数据库
     注册表(超过150条)的汇总信息
+  - `registry: [DbEntryGql!]!` —— 以表格形式显示受支持数据库注册表的
+    **完整列表**(名称/分类/协议兼容性/状态/排名/评分/更新时间)
+- **版本管理标签页**: 可以执行 `currentBranch`/`branches`(分支列表・当前
+  分支)、`log(limit)`(提交日志)、`diff(from, to)`(分支间差异的新增/删除/
+  修改数量)等查询。均基于 `aruaru-db/crates/aruaru-graphql` 的真实 schema
+  (`VcsQuery`)实现。
 - 当 `aruaru-server` 未启动或无法连接时,会**当场渲染与真实 schema 结构相同
   的示例数据**,并明确提示这是"离线示例数据"(该行为已在真实浏览器中验证 ——
   详见下文"验证情况")。
@@ -118,10 +124,20 @@ sudo deploy/systemd/install-systemd-units.sh
   `pkg/aruaru_web_bg.wasm`,并在真实浏览器(Chromium,经由 Playwright)中
   加载 `index.html`,实际操作并确认了以下内容: 标签切换、执行 SQL →
   渲染离线回退数据、查询历史的记录・重新载入・悬停提示、Ctrl+Enter 快捷键、
-  CSV导出(实际触发下载)、注册表汇总、站点管理标签页中已注册站点的显示・
-  新增・拒绝非法端口输入・连接测试按钮・JSON导出/导入(已确认往返一致)・
-  删除确认对话框(取消与执行两种情况均已确认)。控制台中没有 JS 错误
-  (仅有预期内的连接失败日志)。
+  CSV导出(实际触发下载)、注册表汇总与已注册数据库列表的获取、版本管理
+  标签页中分支列表・提交日志・Diff 的获取(均含离线回退)、站点管理标签页中
+  已注册站点的显示・新增・拒绝非法端口输入・连接测试按钮・JSON导出/导入
+  (已确认往返一致)・删除确认对话框(取消与执行两种情况均已确认)。控制台
+  中没有 JS 错误(仅有预期内的连接失败日志)。
+- 实际安装了 Nginx 1.24(Ubuntu 24.04 标准版)・Apache 2.4・certbot,使用
+  自签名证书实际启动 `scripts/gen-vhost.sh` 的生成物,并通过 `curl` 验证
+  (HTTP→HTTPS 重定向、ACME challenge 路径、`/graphql` 反向代理);对实际
+  运行中的 HTTPS 服务器执行 `scripts/check-tls.sh`,确认了 WARN/healthy/
+  ERROR 三种状态;并用 `systemd-analyze verify` 验证了 `deploy/systemd/*`
+  (0 处错误)。在此过程中发现并修复了 Nginx vhost 模板的真实缺陷
+  (`http2 on;` 在 Nginx 1.24 上会导致语法错误)。由于没有公网域名,且验证
+  环境存在 Python ABI 不一致的问题,实际通过 certbot 进行 Let's Encrypt
+  签发(ACME 认证)尚未验证(详情参见 CLAUDE.md)。
 
 ## 目录结构
 

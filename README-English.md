@@ -25,6 +25,14 @@ Other languages: [日本語](README-Japan.md) / [English](README-English.md) /
     `columns`/`rows`/`commandTag` as a table
   - `registrySummary: RegistrySummaryGql` — render the aggregate counts of
     the 150+ entry supported-database registry as summary cards
+  - `registry: [DbEntryGql!]!` — render the **full list** of the
+    supported-database registry as a table (name / category / wire
+    compatibility / status / rank / score / last updated)
+- **Version-control tab**: run `currentBranch`/`branches` (the list of
+  branches and the current branch), `log(limit)` (the commit log), and
+  `diff(from, to)` (added/removed/changed counts between two branches). All
+  of these are based on the real schema (`VcsQuery`) in
+  `aruaru-db/crates/aruaru-graphql`.
 - If `aruaru-server` is not running or unreachable, the page immediately
   renders **sample data shaped exactly like the real schema** and clearly
   labels it as an offline sample (verified in a real browser session — see
@@ -136,11 +144,25 @@ endpoint you switch to from the browser.
   operating the UI: switching tabs, running SQL and seeing it fall back to
   offline sample rendering, query history being recorded/reloaded and its
   hover tooltip, the Ctrl+Enter shortcut, CSV export (a real download
-  firing), the registry summary, the Site Manager tab showing registered
+  firing), fetching the registry summary and the registry list, the
+  Version-control tab's branch list, commit log, and diff retrieval (all
+  including the offline fallback), the Site Manager tab showing registered
   sites, adding a new site, rejecting an invalid port number, the test
   connection button, JSON export/import (round-trip verified), and the
   delete confirmation dialog (both cancel and confirm). No JS errors
   appeared in the console (only the expected connection-failure logging).
+- Actually installed Nginx 1.24 (the Ubuntu 24.04 default), Apache 2.4, and
+  certbot, then started `scripts/gen-vhost.sh`'s generated configs with a
+  self-signed certificate and verified them with `curl` (HTTP-to-HTTPS
+  redirect, the ACME challenge path, and the `/graphql` reverse proxy); ran
+  `scripts/check-tls.sh` against the real HTTPS server and confirmed all
+  three states (WARN/healthy/ERROR); and validated `deploy/systemd/*` with
+  `systemd-analyze verify` (zero errors). In the course of this, a real bug
+  in the Nginx vhost template was found and fixed (`http2 on;` is a syntax
+  error on Nginx 1.24). Actual certificate issuance from Let's Encrypt via
+  certbot (ACME authorization) remains unverified, due to the lack of a
+  public domain and a Python ABI mismatch in the test environment (see
+  CLAUDE.md for details).
 
 ## Layout
 
