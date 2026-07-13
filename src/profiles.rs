@@ -1,13 +1,15 @@
 //! 接続プロファイル(サイト)管理。
 //!
-//! KUSANAGI の「サイト追加/一覧」ダッシュボードのように、aruaru-web 自身の
-//! 接続先(aruaru-db の GraphQL エンドポイント)や、他プロジェクト用の
-//! エンドポイントを複数登録し、ブラウザの `localStorage` に保存して
-//! GUI から切り替えられるようにする。
+//! KUSANAGI の「サイト追加/一覧」ダッシュボードのように、aruaru-web自身の
+//! 管理画面や、他のプロジェクト(WordPress/Laravel/FastAPIなど任意の
+//! バックエンドスタック)のデプロイ先(IPアドレス/ドメイン/サブドメイン/
+//! ポート)を複数登録し、ブラウザの `localStorage` に保存してGUIから
+//! 切り替え・疎通確認できるようにする。
 //!
 //! 実際のドメイン取得・DNS登録(レジストラ操作)はここでは行わない
 //! (`deploy/` 以下の vhost テンプレート・`scripts/gen-vhost.sh` を参照)。
-//! ここで管理するのはあくまで「ブラウザがどの接続先を叩くか」という設定。
+//! ここで管理するのはあくまで「登録済みサイトの一覧と、どれを選択中か」
+//! という設定であり、DB(aruaru-db等)への接続機能は持たない。
 
 use crate::dom::{by_id, document, esc, try_by_id};
 use serde::{Deserialize, Serialize};
@@ -15,14 +17,14 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{HtmlInputElement, HtmlSelectElement};
 
-const STORAGE_KEY: &str = "aruaru_web_site_profiles_v1";
-const ACTIVE_KEY: &str = "aruaru_web_active_site_id_v1";
+const STORAGE_KEY: &str = "aruaru_web_site_profiles_v2";
+const ACTIVE_KEY: &str = "aruaru_web_active_site_id_v2";
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct SiteProfile {
     pub id: String,
     pub name: String,
-    /// "aruaru-web" | "other"
+    /// "self"(aruaru-web自身の管理画面) | "other"(それ以外の任意のサイト)
     pub purpose: String,
     /// "http" | "https"
     pub protocol: String,
@@ -30,13 +32,13 @@ pub struct SiteProfile {
     pub host: String,
     pub port: u16,
     pub path: String,
-    /// 自由記述のバックエンドスタック(例: "Rust + Poem", "PHP + Laravel",
-    /// "Python + FastAPI")。実際の scaffolding は行わず、表示用ラベルのみ。
+    /// 自由記述のバックエンドスタック(例: "WordPress", "PHP + Laravel",
+    /// "Python + FastAPI")。`scripts/gen-vhost.sh --stack` の選択の目安。
     pub backend_stack: String,
 }
 
 impl SiteProfile {
-    pub fn endpoint(&self) -> String {
+    pub fn url(&self) -> String {
         format!(
             "{}://{}:{}{}",
             self.protocol, self.host, self.port, self.path
@@ -51,25 +53,24 @@ fn local_storage() -> Option<web_sys::Storage> {
 fn default_profiles() -> Vec<SiteProfile> {
     vec![
         SiteProfile {
-            id: "seed-aruaru-web".to_string(),
-            name: "aruaru-db (ローカル)".to_string(),
-            purpose: "aruaru-web".to_string(),
+            id: "seed-self".to_string(),
+            name: "aruaru-web(このサイト)".to_string(),
+            purpose: "self".to_string(),
             protocol: "http".to_string(),
             host: "localhost".to_string(),
-            port: 4000,
-            path: "/graphql".to_string(),
-            backend_stack: "Rust + async-graphql (aruaru-db)".to_string(),
+            port: 8080,
+            path: "/".to_string(),
+            backend_stack: "Rust + WebAssembly".to_string(),
         },
         SiteProfile {
             id: "seed-other-example".to_string(),
-            name: "他プロジェクト用(例)".to_string(),
+            name: "WordPressサイト(例)".to_string(),
             purpose: "other".to_string(),
-            protocol: "http".to_string(),
-            host: "tool.example.local".to_string(),
-            port: 9000,
-            path: "/graphql".to_string(),
-            backend_stack: "任意(PHP + Laravel / Python + FastAPI / Rust + Poem など)"
-                .to_string(),
+            protocol: "https".to_string(),
+            host: "example.com".to_string(),
+            port: 443,
+            path: "/".to_string(),
+            backend_stack: "WordPress (PHP-FPM)".to_string(),
         },
     ]
 }
@@ -107,19 +108,6 @@ pub fn set_active_profile_id(id: &str) {
     }
 }
 
-/// アクティブなプロファイルのエンドポイントURL。未設定なら先頭のプロファイル。
-pub fn active_endpoint() -> String {
-    let profiles = load_profiles();
-    let active_id = active_profile_id();
-    let chosen = active_id
-        .as_deref()
-        .and_then(|id| profiles.iter().find(|p| p.id == id))
-        .or_else(|| profiles.first());
-    chosen
-        .map(|p| p.endpoint())
-        .unwrap_or_else(|| "http://localhost:4000/graphql".to_string())
-}
-
 pub fn active_profile_name() -> String {
     let profiles = load_profiles();
     let active_id = active_profile_id();
@@ -135,7 +123,7 @@ fn new_id() -> String {
     format!("site-{}", js_sys::Date::now() as u64)
 }
 
-/// 「サイト管理」タブの一覧+フォームを再描画する。
+/// サイト管理画面の一覧+フォームを再描画する。
 pub fn render_site_manager() {
     let profiles = load_profiles();
     let active_id = active_profile_id().unwrap_or_default();
@@ -145,12 +133,13 @@ pub fn render_site_manager() {
         list_html.push_str("<p class=\"muted\">登録済みサイトはありません。下のフォームから追加してください。</p>");
     }
     for p in &profiles {
-        let is_active = p.id == active_id || (active_id.is_empty() && profiles.first().map(|f| f.id.clone()) == Some(p.id.clone()));
+        let is_active = p.id == active_id
+            || (active_id.is_empty() && profiles.first().map(|f| f.id.clone()) == Some(p.id.clone()));
         list_html.push_str(&format!(
             r#"<div class="site-card{active_class}">
   <div class="site-card-main">
     <div class="site-card-title">{name} {badge}</div>
-    <div class="site-card-meta muted">{purpose_label} ・ {endpoint}</div>
+    <div class="site-card-meta muted">{purpose_label} ・ {url}</div>
     <div class="site-card-stack muted">スタック: {stack}</div>
   </div>
   <div class="site-card-actions">
@@ -163,9 +152,9 @@ pub fn render_site_manager() {
 </div>"#,
             active_class = if is_active { " active" } else { "" },
             name = esc(&p.name),
-            badge = if is_active { "<span class=\"badge\">現在の接続</span>" } else { "" },
-            purpose_label = if p.purpose == "aruaru-web" { "aruaru-web用" } else { "他の用途" },
-            endpoint = esc(&p.endpoint()),
+            badge = if is_active { "<span class=\"badge\">選択中</span>" } else { "" },
+            purpose_label = if p.purpose == "self" { "このサイト" } else { "他のサイト" },
+            url = esc(&p.url()),
             stack = esc(&p.backend_stack),
             id = esc(&p.id),
         ));
@@ -212,13 +201,14 @@ fn on_select_site(id: String) {
     set_active_profile_id(&id);
     render_site_manager();
     crate::dom::set_status(&format!(
-        "接続先を「{}」に切り替えました。",
+        "「{}」を選択しました。",
         active_profile_name()
     ));
-    sync_endpoint_field();
+    sync_active_site_label();
 }
 
-/// カードの「接続テスト」ボタン。アクティブなサイトを変えずに疎通確認だけ行う。
+/// カードの「接続テスト」ボタン。選択中のサイトを変えずに疎通確認だけ行う。
+/// GraphQL等の特定プロトコルには依存せず、単純なHTTP到達性のみ確認する。
 fn on_test_site(id: String) {
     let profiles = load_profiles();
     let Some(profile) = profiles.iter().find(|p| p.id == id).cloned() else {
@@ -229,21 +219,35 @@ fn on_test_site(id: String) {
         el.set_text_content(Some("確認中…"));
     }
     wasm_bindgen_futures::spawn_local(async move {
-        let endpoint = profile.endpoint();
-        let outcome = crate::graphql::post_graphql(
-            &endpoint,
-            crate::graphql::REGISTRY_SUMMARY_QUERY,
-            serde_json::Value::Null,
-        )
-        .await;
-        let message = match outcome {
-            Ok(_) => "✅ 接続成功".to_string(),
-            Err(e) => format!("❌ 接続失敗: {e}"),
+        let message = match check_reachable(&profile.url()).await {
+            Ok(()) => "✅ 到達可能".to_string(),
+            Err(e) => format!("❌ 到達不可: {e}"),
         };
         if let Some(el) = try_by_id(&result_id) {
             el.set_text_content(Some(&message));
         }
     });
+}
+
+/// `url` へ軽量なHTTPリクエストを送り、到達可能かどうかだけを確認する。
+/// 任意の外部サイト(CORSヘッダを持たない可能性が高い)が対象のため、
+/// `no-cors` モードで送信し、レスポンス内容は読まずネットワークエラーの
+/// 有無のみで判定する。
+async fn check_reachable(url: &str) -> Result<(), String> {
+    use wasm_bindgen_futures::JsFuture;
+    use web_sys::{Request, RequestInit, RequestMode};
+
+    let opts = RequestInit::new();
+    opts.set_method("GET");
+    opts.set_mode(RequestMode::NoCors);
+
+    let request =
+        Request::new_with_str_and_init(url, &opts).map_err(|e| format!("request build failed: {e:?}"))?;
+
+    JsFuture::from(crate::dom::window().fetch_with_request(&request))
+        .await
+        .map(|_| ())
+        .map_err(|e| format!("fetch failed: {e:?}"))
 }
 
 fn on_delete_site(id: String) {
@@ -269,7 +273,7 @@ fn on_delete_site(id: String) {
         }
     }
     render_site_manager();
-    sync_endpoint_field();
+    sync_active_site_label();
 }
 
 fn on_edit_site(id: String) {
@@ -321,8 +325,8 @@ pub fn clear_form() {
     };
     set_val("site-name", "");
     set_val("site-host", "");
-    set_val("site-port", "8080");
-    set_val("site-path", "/graphql");
+    set_val("site-port", "443");
+    set_val("site-path", "/");
     set_val("site-stack", "");
 }
 
@@ -364,7 +368,7 @@ pub fn on_save_site() {
         }
     };
     let path = if path_raw.trim().is_empty() {
-        "/graphql".to_string()
+        "/".to_string()
     } else if path_raw.starts_with('/') {
         path_raw
     } else {
@@ -401,17 +405,12 @@ pub fn on_save_site() {
     save_profiles(&profiles);
     clear_form();
     render_site_manager();
-    sync_endpoint_field();
+    sync_active_site_label();
     crate::dom::set_status("サイト情報を保存しました。");
 }
 
-/// SQL/レジストリタブのエンドポイント表示欄をアクティブなサイトに合わせる。
-pub fn sync_endpoint_field() {
-    if let Some(el) = try_by_id("endpoint") {
-        if let Ok(input) = el.dyn_into::<HtmlInputElement>() {
-            input.set_value(&active_endpoint());
-        }
-    }
+/// ヘッダーの「選択中のサイト」表示を更新する。
+pub fn sync_active_site_label() {
     if let Some(el) = try_by_id("active-site-name") {
         el.set_text_content(Some(&active_profile_name()));
     }
@@ -480,7 +479,7 @@ fn apply_imported_json(text: &str) {
                 set_active_profile_id(&first.id);
             }
             render_site_manager();
-            sync_endpoint_field();
+            sync_active_site_label();
             crate::dom::set_status(&format!("{count}件のサイトをインポートしました。"));
         }
         Ok(_) => crate::dom::set_status("インポートするサイトがありません(空のファイルです)。"),

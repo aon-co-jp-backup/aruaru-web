@@ -7,7 +7,7 @@ edition = "2021"
 rust-version = "1.75"
 authors = ["aruaru-web Contributors"]
 license = "Apache-2.0"
-description = "aruaru-web: aruaru-db admin/query UI. Rust compiled to WebAssembly, no Tauri/Node.js/TypeScript build chain."
+description = "aruaru-web: KUSANAGI-like deploy/ops tool (IP launch, domain/vhost, automatic HTTPS). Rust compiled to WebAssembly, no Tauri/Node.js/TypeScript build chain."
 repository = "https://github.com/aon-co-jp/aruaru-web"
 
 [lib]
@@ -26,29 +26,23 @@ features = [
     "Blob",
     "BlobPropertyBag",
     "console",
-    "CssStyleDeclaration",
     "Document",
-    "DomTokenList",
     "Element",
     "Event",
     "EventTarget",
     "File",
     "FileList",
     "FileReader",
-    "Headers",
     "HtmlAnchorElement",
     "HtmlButtonElement",
     "HtmlElement",
     "HtmlInputElement",
     "HtmlSelectElement",
-    "HtmlTextAreaElement",
-    "KeyboardEvent",
     "Node",
     "NodeList",
     "Request",
     "RequestInit",
     "RequestMode",
-    "Response",
     "Storage",
     "Url",
     "Window",

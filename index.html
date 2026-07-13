@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="aruaru-db web UI (Rust -> WebAssembly)" />
+    <meta name="description" content="aruaru-web: KUSANAGI-like deploy/ops tool (Rust -> WebAssembly)" />
     <title>aruaru-web</title>
     <style>
       :root {
@@ -50,7 +50,7 @@
         margin-top: 1rem;
       }
       label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 0.3rem; }
-      input, textarea {
+      input, select {
         display: block;
         width: 100%;
         background: var(--bg);
@@ -60,8 +60,7 @@
         padding: 0.5rem 0.6rem;
         font: inherit;
       }
-      textarea { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.85rem; resize: vertical; }
-      input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+      input:focus, select:focus { outline: none; border-color: var(--accent); }
       .buttons { margin-top: 0.75rem; }
       button {
         cursor: pointer;
@@ -78,57 +77,6 @@
       button:disabled { opacity: 0.5; cursor: not-allowed; }
       button:disabled:hover { background: var(--bg); color: var(--accent); border-color: var(--border); }
       #status { font-size: 0.9rem; }
-      .hint { font-size: 0.8rem; margin: 0.35rem 0 0; }
-      .table-scroll { max-height: 60vh; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius); }
-      #result table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
-      #result th, #result td {
-        border: 1px solid var(--border);
-        padding: 0.4rem 0.55rem;
-        text-align: left;
-      }
-      #result th { background: var(--bg); position: sticky; top: 0; }
-      #result .offline {
-        background: rgba(217, 119, 6, 0.12);
-        border: 1px solid rgba(217, 119, 6, 0.4);
-        border-radius: var(--radius);
-        padding: 0.6rem 0.75rem;
-        font-size: 0.85rem;
-      }
-      #result .tag { font-size: 0.85rem; color: var(--muted); }
-      dl.summary { display: flex; flex-wrap: wrap; gap: 1rem; margin: 0; }
-      dl.summary .stat {
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        padding: 0.6rem 0.9rem;
-        min-width: 6rem;
-      }
-      dl.summary dt { font-size: 0.75rem; color: var(--muted); margin: 0; }
-      dl.summary dd { font-size: 1.4rem; font-weight: 600; margin: 0.15rem 0 0; }
-
-      /* タブナビゲーション */
-      .tabs {
-        display: flex;
-        gap: 0.4rem;
-        margin-top: 1.25rem;
-        border-bottom: 1px solid var(--border);
-      }
-      .tab-btn {
-        margin: 0;
-        border: 1px solid transparent;
-        border-bottom: none;
-        border-radius: var(--radius) var(--radius) 0 0;
-        background: transparent;
-        color: var(--muted);
-        padding: 0.55rem 1rem;
-      }
-      .tab-btn:hover { background: var(--bg-raised); color: var(--fg); border-color: var(--border); }
-      .tab-btn.active {
-        background: var(--bg-raised);
-        color: var(--accent);
-        border-color: var(--border);
-        font-weight: 600;
-      }
-      .tab-panel { display: none; }
 
       /* サイト管理 */
       .site-card {
@@ -168,23 +116,6 @@
       }
       button.secondary { color: var(--muted); }
       section h2 { font-size: 1rem; margin: 0 0 0.5rem; }
-
-      /* クエリ履歴 */
-      .history-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; }
-      .history-item {
-        display: block;
-        width: 100%;
-        text-align: left;
-        margin: 0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-        font-size: 0.82rem;
-        font-weight: 400;
-        color: var(--fg);
-      }
-      .history-item:hover { background: var(--bg); color: var(--accent); }
 
       .test-result { font-size: 0.8rem; align-self: center; }
     </style>
