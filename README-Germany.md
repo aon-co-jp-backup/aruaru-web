@@ -1,20 +1,20 @@
 # aruaru-web
 
-**Minimale Web-UI für aruaru-db (Rust → WebAssembly, ohne Framework)**
+**"Das zweite KUSANAGI" — ein Ops-Tool, mit dem sich eine App nach dem
+Hochladen per IP-Adresse starten lässt und Domain-Registrierung sowie
+HTTPS-Einrichtung bequem automatisiert angewendet werden können (Rust →
+WebAssembly, ohne Framework)**
 
-Dies ist ein Tab-basiertes Dashboard, das die von `aruaru-db` (der verteilten
-Git-on-SQL-Datenbank) über GraphQL (`/graphql`) bereitgestellten Queries `sql`
-und `registrySummary` (Aggregat der Registry unterstützter Datenbanken) direkt
-aus dem Browser heraus aufruft und die Ergebnisse anzeigt. Darüber hinaus
-verfolgt das Projekt das Ziel, **"das zweite KUSANAGI"** zu sein — vergleichbar
-mit dem WordPress-Beschleunigungs-Baukasten KUSANAGI: ein Ops-Tool, mit dem
-sich diese App hochladen, per IP-Adresse starten und anschließend
-Domain-Registrierung sowie HTTPS-Einrichtung bequem automatisiert anwenden
-lassen. Dazu gehören ein "Sitenverwaltung"-Tab, in dem sich mehrere
-Verbindungsziele (für aruaru-web selbst sowie für andere Projekte) anlegen und
-per Klick wechseln lassen, sowie das komplette Paket aus IP-Start,
-vhost-Erzeugung und automatischer Einrichtung/Überwachung/Erneuerung von
-HTTPS (TLS).
+Ähnlich wie der WordPress-Beschleunigungs-Baukasten "KUSANAGI" verfolgt
+dieses Ops-Tool das Ziel, nach dem Hochladen einer App den kompletten Weg
+von **Start per IP-Adresse → vereinfachte Domain-Registrierung → automatische
+HTTPS-Einrichtung** aus einer Hand abzudecken. Für beliebige
+Backend-Stacks — WordPress, PHP + Laravel, Python + FastAPI und mehr — lassen
+sich beschleunigende Reverse-Proxy-Konfigurationen (Nginx/Apache) automatisch
+erzeugen, und ein "Sitenverwaltung"-Bildschirm erlaubt es, Verbindungsziele
+für mehrere Sites anzulegen, zu wechseln und ihre Erreichbarkeit zu prüfen.
+**Eine Anbindung an Datenbanken besitzt das Projekt nicht** (bewusst
+außerhalb des Umfangs).
 
 📖 Andere Sprachen: [日本語](README-Japan.md) / [English](README-English.md) /
 [中文](README-Chinese.md) / [한국어](README-Korea.md) / [Español](README-Spain.md) /
@@ -25,66 +25,63 @@ HTTPS (TLS).
 
 ## Was aktuell funktioniert
 
-- Sendet echte GraphQL-Anfragen per `fetch()` an den `/graphql`-Endpunkt von
-  `aruaru-graphql` (`aruaru-db/crates/aruaru-graphql`):
-  - `sql(query: String!): QueryResultGql` — führt beliebiges SQL aus und
-    zeigt `columns`/`rows`/`commandTag` als Tabelle an
-  - `registrySummary: RegistrySummaryGql` — zeigt die Zusammenfassung der
-    Registry unterstützter Datenbanken (über 150 Einträge) als Karten an
-- Ist `aruaru-server` nicht gestartet oder nicht erreichbar, rendert die Seite
-  sofort **Beispieldaten in exakt der Form des echten Schemas** und
-  kennzeichnet sie deutlich als "Offline-Beispiel" (dieses Verhalten wurde in
-  einem echten Browser verifiziert — siehe "Durchgeführte Tests" weiter
-  unten).
-- **Sitenverwaltung-Tab**: Mehrere Verbindungsziele (für aruaru-web selbst
-  sowie für andere Projekte) — IP-Adresse/Domain/Subdomain/Port/Pfad — können
-  angelegt und in `localStorage` gespeichert werden; der Wechsel erfolgt per
-  Klick. Das Endpunkt-Feld der Tabs "SQL" und "Registry" folgt automatisch der
-  gerade ausgewählten Site. Jede Karte besitzt eine
-  **"Verbindungstest"-Taste**, mit der sich die Erreichbarkeit prüfen lässt,
-  ohne die aktive Site zu wechseln, außerdem eine Eingabevalidierung für die
-  Portnummer (1–65535), **JSON-Export/-Import** der gesamten Site-Liste (für
-  Backups bzw. die Mitnahme in einen anderen Browser) sowie einen
-  Bestätigungsdialog vor dem Löschen.
-- **Verbesserte Bedienbarkeit im SQL-Tab**: ein **Query-Verlauf** der letzten
-  10 Abfragen (per Klick erneut ausführbar, vollständiger Text beim Hovern
-  sichtbar), eine **Tastenkombination Ctrl+Enter / Cmd+Enter** zum Ausführen,
-  **CSV-Export** der Ergebnisse, Deaktivierung der Ausführen-Taste während
-  der Abfrage sowie eine Ergebnistabelle mit Zeilenzähler, Scrollbarkeit und
-  fixiertem Tabellenkopf.
-- **Automatische Einrichtung, Überwachung und Erneuerung von HTTPS (TLS)**:
-  `scripts/gen-vhost.sh` erzeugt einen Nginx-/Apache-vhost (inklusive
-  HTTP→HTTPS-Weiterleitung), `scripts/setup-tls.sh` besorgt das Zertifikat
-  über Let's Encrypt (certbot), und `deploy/systemd/install-systemd-units.sh`
-  aktiviert eine "zweimal täglich laufende automatische Erneuerung"
-  (`aruaru-tls-renew.timer`) sowie eine "einmal täglich laufende Überwachung
-  auf ablaufende Zertifikate" (`aruaru-tls-monitor.timer` →
-  `scripts/check-all-tls.sh`). Details siehe Abschnitt "HTTPS sowie
-  Registrierung von Domains/Subdomains".
+- **Sitenverwaltung-Bildschirm**: Für aruaru-web selbst, WordPress, Laravel,
+  FastAPI und beliebige andere Backend-Stacks lassen sich mehrere
+  Deployment-Ziele (IP-Adresse/Domain/Subdomain/Port/Pfad) anlegen, in
+  `localStorage` speichern und per Klick auswählen bzw. auf Erreichbarkeit
+  prüfen (entspricht der Site-Liste von KUSANAGI). Jede Karte besitzt eine
+  **"Verbindungstest"-Taste** (führt nur eine einfache HTTP-Erreichbarkeits-
+  prüfung durch, ohne die ausgewählte Site zu wechseln), eine
+  Eingabevalidierung für die Portnummer (1–65535), **JSON-Export/-Import**
+  der gesamten registrierten Site-Liste (für Backups bzw. die Mitnahme in
+  einen anderen Browser) sowie einen Bestätigungsdialog vor dem Löschen.
+- **Start über eine IP-Adresse**: `scripts/serve.sh` stellt die App auf einer
+  beliebigen IP-Adresse und einem beliebigen Port lokal oder auf einem VPS
+  bereit.
+- **vhost-Erzeugung, Beschleunigung und automatische HTTPS-Einrichtung**:
+  `scripts/gen-vhost.sh` erzeugt aus der Kombination
+  Domain/IP-Adresse/Backend-Stack einen Nginx-/Apache-vhost (inklusive
+  HTTP→HTTPS-Weiterleitung). Unterstützt werden die fünf Stacks `static`
+  (statische Site), `proxy` (generischer Reverse-Proxy für aruaru-db,
+  open-web-server, open-raid-z-artige oder beliebige andere Backends),
+  `wordpress`, `laravel` und `fastapi`, jeweils mit stackspezifischen
+  Beschleunigungseinstellungen wie gzip-Kompression, langfristigem Caching
+  statischer Assets, Upstream-Keepalive und angepassten FastCGI-Puffern.
+- **Automatische Überwachung und Erneuerung von HTTPS (TLS)**:
+  `scripts/setup-tls.sh` besorgt das Zertifikat über Let's Encrypt (certbot),
+  und `deploy/systemd/install-systemd-units.sh` aktiviert eine "zweimal
+  täglich laufende automatische Erneuerung" (`aruaru-tls-renew.timer`) sowie
+  eine "einmal täglich laufende Überwachung auf ablaufende Zertifikate"
+  (`aruaru-tls-monitor.timer` → `scripts/check-all-tls.sh`).
+- **Deployment auf einen VPS**: Ein einziger Aufruf von
+  `scripts/deploy-vps.ps1` aus Windows PowerShell automatisiert Build →
+  Upload auf den VPS → Start (Details siehe Abschnitt "Deployment auf einen
+  VPS" weiter unten).
 
 ## Was aktuell (noch) nicht funktioniert (ehrlicher Umfang)
 
-- **Vertiefende Datenbankfunktionen wie die versionsverwaltungsbezogenen
-  Queries von aruaru-db (Branches, Log, Diff usw.) oder eine detaillierte
-  Registry-Liste sind bewusst nicht vorgesehen.** Das Ziel dieses
-  Repositories ist ein Ops-Tool im Sinne des "zweiten KUSANAGI" (Start per
-  IP-Adresse, vereinfachte Domain-Registrierung, automatisiertes HTTPS) — eine
-  Erweiterung der DB-Verwaltungs-UI über die minimale aruaru-db-Anbindung
-  (SQL-Ausführung und Registry-Zusammenfassung) hinaus ist auch künftig nicht
-  geplant.
-- GraphQL-Mutationen (Branch-Erstellung, Merge, Registry-Crawl usw.) sind
-  noch nicht implementiert.
+- **Keine Anbindung an Datenbanken.** Funktionen, die von einem bestimmten
+  Datenbankprodukt abhängen — etwa SQL-Ausführung oder GraphQL-Queries —
+  liegen bewusst außerhalb des Umfangs und werden auch künftig nicht
+  implementiert. Auch bei Verwendung eines bestimmten Backends wie
+  aruaru-db lassen sich der "Sitenverwaltung"-Bildschirm und die
+  vhost-Erzeugung (`--stack=proxy`) als **generischer Reverse-Proxy bzw. als
+  Deployment-Verwaltung** nutzen, jedoch werden keine Query-Funktionen
+  bereitgestellt, die spezifisch für diese Datenbank sind.
 - Authentifizierung, Paginierung und automatische Wiederholung bei Fehlern
-  sind noch nicht implementiert.
+  sind nicht implementiert.
 - Es wird kein natives App-Erlebnis wie bei Tauri geboten (nur WASM, das im
   Browser läuft).
-- **Der eigentliche Domain-Erwerb und das Anlegen von DNS-Einträgen (bei der
-  Registrierungsstelle) erfolgen nicht aus diesem Repository heraus** (da
-  damit Kosten und Auswirkungen auf externe Dienste verbunden sind). Was hier
-  automatisiert ist, beschränkt sich auf "Erzeugung der vhost-Konfiguration"
-  sowie "Erwerb, Überwachung und automatische Erneuerung des
-  TLS-Zertifikats" für eine bereits registrierte Domain — die
-  DNS-Registrierung selbst nimmt der Nutzer bei der Registrierungsstelle vor.
+- **Der eigentliche Domain-Erwerb sowie das Anlegen von DNS-Einträgen (bei
+  der Registrierungsstelle) erfolgen nicht aus diesem Repository heraus**
+  (da damit Kosten entstehen und Auswirkungen auf externe Dienste verbunden
+  sind). Was hier automatisiert ist, beschränkt sich auf die "Erzeugung der
+  vhost-Konfiguration" sowie den "Erwerb, die Überwachung und die
+  automatische Erneuerung des TLS-Zertifikats" für eine bereits registrierte
+  Domain — die DNS-Registrierung selbst nimmt der Nutzer bei der
+  Registrierungsstelle vor.
+- Der eigentliche Abschluss eines VPS-Vertrags (mit einem
+  Hosting-Anbieter) erfolgt ebenfalls nicht aus diesem Repository heraus.
 
 ## Build-Anleitung
 
@@ -104,13 +101,6 @@ python -m http.server 8080
 # Im Browser http://localhost:8080/index.html öffnen
 ```
 
-Um es mit einem tatsächlich laufenden `aruaru-db` auszuprobieren:
-
-```bash
-cd ../aruaru-db
-cargo run -p aruaru-server -- --data ./data --raft-id 1   # GraphQL läuft danach auf :4000
-```
-
 ## Start über eine IP-Adresse
 
 ```bash
@@ -118,65 +108,137 @@ scripts/serve.sh 0.0.0.0 8080        # auf allen Schnittstellen lauschen
 scripts/serve.sh 192.168.1.50 8080   # nur auf einer bestimmten IP-Adresse lauschen
 ```
 
-## HTTPS sowie Registrierung von Domains/Subdomains
+Nach dem Start lässt sich die App überprüfen, indem man **die IP-Adresse
+direkt in die Adresszeile des Browsers eingibt** (Beispiel:
+`http://192.168.1.50:8080/index.html`). Der entscheidende Punkt: Die
+Funktionsprüfung ist bereits allein über die IP-Adresse möglich, noch bevor
+eine Domain registriert wurde.
+
+## Deployment auf einen VPS (aus Windows PowerShell)
+
+Nachdem ein VPS-Mietserver angeschafft wurde, genügt ein einziger Aufruf von
+`scripts/deploy-vps.ps1` aus Windows PowerShell, um Build → Upload → Start
+vollständig zu automatisieren. Wird `open-web-server` parallel eingesetzt,
+lässt sich dieses gleichzeitig mit hochladen (dieses Repository greift dabei
+nicht in den Inhalt von `open-web-server` ein, sondern gibt lediglich den
+Ziel-Uploadpfad an).
+
+```powershell
+# Nur hochladen und starten (ausschließlich aruaru-web)
+.\scripts\deploy-vps.ps1 -VpsHost 203.0.113.10 -VpsUser root -StartServer
+
+# Zusätzlich open-web-server (F:\open-runo\open-web-server) mit hochladen
+.\scripts\deploy-vps.ps1 -VpsHost 203.0.113.10 -VpsUser root -StartServer `
+    -OpenWebServerPath "F:\open-runo\open-web-server"
+```
+
+Intern entspricht dies den folgenden Schritten (lassen sich auch manuell
+ausführen):
+
+```powershell
+# 1. Lokaler Build
+cargo build --target wasm32-unknown-unknown
+wasm-bindgen --target web --no-typescript --out-dir pkg `
+    target/wasm32-unknown-unknown/debug/aruaru_web.wasm
+
+# 2. Upload auf den VPS (OpenSSH-Client, ab Windows 10 1809 bzw. Windows 11 standardmäßig vorhanden)
+ssh root@203.0.113.10 "mkdir -p /root/aruaru-web"
+scp -r .\index.html .\pkg .\scripts .\deploy .\Cargo.toml .\src `
+    root@203.0.113.10:/root/aruaru-web/
+
+# 3. Start auf dem VPS über eine IP-Adresse
+ssh root@203.0.113.10 "cd /root/aruaru-web && bash scripts/serve.sh 0.0.0.0 8080"
+```
+
+Nach dem Start gibt man **die IP-Adresse des VPS in die Adresszeile des
+Browsers ein** (Beispiel: `http://203.0.113.10:8080/index.html`). Soll die
+lokale Kopie unter `F:\open-runo\aruaru-web` o.Ä. stets aktuell gehalten
+werden, genügt ein `git pull` in diesem Repository:
+
+```powershell
+cd F:\open-runo\aruaru-web
+git fetch origin
+git pull origin <Branch-Name>
+```
+
+**Auch ohne Upload nutzbar**: Wer die App ohne VPS nur lokal ausprobieren
+möchte, führt einfach `scripts/serve.sh` wie im obigen Abschnitt "Start über
+eine IP-Adresse" beschrieben lokal aus. Von anderen Geräten im selben LAN
+aus ist die App dann über `http://<IP-Adresse-des-lokalen-PCs>:8080/`
+erreichbar.
+
+## vhost-Erzeugung, Beschleunigung und Registrierung von Domains/Subdomains
 
 Dieses Repository selbst übernimmt weder den Domain-Erwerb noch die
-Registrierung von DNS-Einträgen (das erfolgt bei der Registrierungsstelle und
-verursacht Kosten, daher führt der Nutzer dies separat durch). Im Folgenden
-geht es um die lokale Automatisierung, mit der eine bereits registrierte
-Domain/Subdomain bequem für aruaru-web bzw. andere Projekte bereitgestellt
-werden kann (vergleichbar mit "Site hinzufügen" bei KUSANAGI).
+Registrierung von DNS-Einträgen (das erfolgt bei der Registrierungsstelle
+und verursacht Kosten, daher führt der Nutzer dies separat durch). Im
+Folgenden geht es um die lokale Automatisierung, mit der für eine bereits
+registrierte Domain/Subdomain bequem ein beschleunigter Reverse-Proxy je
+nach Stack bereitgestellt werden kann (vergleichbar mit "Site hinzufügen"
+bei KUSANAGI).
 
 ```bash
-# 1. vhost (Nginx/Apache, inklusive HTTP→HTTPS-Weiterleitung) aus Domain + IP + Backend erzeugen
-scripts/gen-vhost.sh aruaru.example.com 203.0.113.10 127.0.0.1:4000
-# Ebenso für eine Subdomain mit anderem Zweck (nur UPSTREAM/WEBROOT anpassen)
-scripts/gen-vhost.sh tool.example.com 203.0.113.10 127.0.0.1:9000 /var/www/tool
+# aruaru-web selbst (statische Site)
+scripts/gen-vhost.sh --stack=static aruaru.example.com 203.0.113.10
 
-# 2. Die erzeugte Konfigurationsdatei einspielen und neu laden (unter deploy/generated/, von .gitignore ausgeschlossen)
+# Generischer Reverse-Proxy für aruaru-db, open-web-server, open-raid-z-artige oder beliebige Backends
+scripts/gen-vhost.sh --stack=proxy tool.example.com 203.0.113.10 127.0.0.1:9000
 
-# 3. TLS-Zertifikat beziehen (Let's Encrypt / certbot)
+# WordPress (PHP-FPM-Socket/Adresse angeben)
+scripts/gen-vhost.sh --stack=wordpress blog.example.com 203.0.113.10 \
+  unix:/run/php/php8.3-fpm.sock /var/www/blog
+
+# Laravel (public-Verzeichnis explizit angeben)
+scripts/gen-vhost.sh --stack=laravel app.example.com 203.0.113.10 \
+  unix:/run/php/php8.3-fpm.sock /var/www/app/public
+
+# FastAPI (Reverse-Proxy zu einem ASGI-Server, mit WebSocket-/Streaming-Unterstützung)
+scripts/gen-vhost.sh --stack=fastapi api.example.com 203.0.113.10 127.0.0.1:8000
+```
+
+Nachdem die erzeugte Konfigurationsdatei (unter `deploy/generated/`, von
+`.gitignore` ausgeschlossen) in das Konfigurationsverzeichnis von
+Nginx/Apache kopiert und neu geladen wurde, wird das Zertifikat bezogen:
+
+```bash
 scripts/setup-tls.sh aruaru.example.com admin@example.com /var/www/aruaru.example.com
 
-# 4. Automatische Erneuerung (zweimal täglich) + automatische Überwachung (einmal täglich, erkennt bevorstehenden Ablauf) aktivieren
+# Automatische Erneuerung (zweimal täglich) + automatische Überwachung (einmal täglich, erkennt bevorstehenden Ablauf) aktivieren
 sudo deploy/systemd/install-systemd-units.sh
 ```
 
 Die Ablaufdaten der Zertifikate aller registrierten Domains lassen sich
 jederzeit manuell mit `scripts/check-all-tls.sh` prüfen. Trägt man dieselben
-Verbindungsziele zusätzlich im "Sitenverwaltung"-Tab der aruaru-web-GUI ein,
-stimmen die Ziele mit der Verbindungsauswahl im Browser überein.
+Verbindungsziele zusätzlich im "Sitenverwaltung"-Bildschirm der
+aruaru-web-GUI ein, lassen sie sich von der Browserseite aus auflisten und
+auf Erreichbarkeit prüfen.
 
 ## Durchgeführte Tests (in diesem Durchlauf)
 
 - `cargo check --target wasm32-unknown-unknown` sowie `cargo build --target
   wasm32-unknown-unknown` waren beide erfolgreich (0 Warnungen).
 - Mit `wasm-bindgen --target web` wurden `pkg/aruaru_web.js` und
-  `pkg/aruaru_web_bg.wasm` erzeugt und `index.html` in einem echten Browser
-  (Chromium, über Playwright) geladen. Dabei wurde tatsächlich Folgendes per
-  Klick geprüft: Tab-Wechsel, SQL-Ausführung mit anschließendem Rendering des
-  Offline-Fallbacks, Aufzeichnung und erneutes Laden aus dem Query-Verlauf
-  samt Tooltip beim Hovern, die Ctrl+Enter-Tastenkombination, der CSV-Export
-  (mit tatsächlich ausgelöstem Download), die Registry-Zusammenfassung, die
-  Anzeige registrierter Sites im Sitenverwaltung-Tab, das Anlegen neuer
-  Sites, die Ablehnung ungültiger Porteingaben, die "Verbindungstest"-Taste,
-  JSON-Export/-Import (Roundtrip verifiziert) sowie der Bestätigungsdialog
-  vor dem Löschen (sowohl Abbrechen als auch Ausführen). Es traten keine
-  JS-Fehler in der Konsole auf (nur die beabsichtigten Protokollmeldungen zu
-  fehlgeschlagenen Verbindungen).
-- Nginx 1.24 (Standard unter Ubuntu 24.04), Apache 2.4 und certbot wurden
-  tatsächlich installiert; die von `scripts/gen-vhost.sh` erzeugten
-  Konfigurationen wurden mit einem selbstsignierten Zertifikat real
-  gestartet und per `curl` geprüft (HTTP→HTTPS-Weiterleitung,
-  ACME-Challenge-Pfad, Reverse-Proxy auf `/graphql`). `scripts/check-tls.sh`
-  wurde gegen den tatsächlich laufenden HTTPS-Server ausgeführt, wobei alle
-  drei Zustände WARN/healthy/ERROR bestätigt wurden, und `deploy/systemd/*`
-  wurde mit `systemd-analyze verify` geprüft (0 Fehler). Dabei wurde ein
-  echter Fehler in der Nginx-vhost-Vorlage gefunden und behoben (`http2
-  on;` führt unter Nginx 1.24 zu einem Syntaxfehler). Der tatsächliche
-  Zertifikatsbezug bei Let's Encrypt über certbot (ACME-Verifizierung)
-  konnte mangels öffentlicher Domain und wegen einer Python-ABI-Inkompatibilität
-  in der Testumgebung nicht verifiziert werden (Details siehe CLAUDE.md).
+  `pkg/aruaru_web_bg.wasm` erzeugt, und `index.html` wurde in einem echten
+  Browser (Chromium, über Playwright) geladen. Dabei wurde tatsächlich
+  Folgendes per Klick geprüft: Anzeige registrierter Sites im
+  Sitenverwaltung-Bildschirm, Anlegen neuer Sites, Ablehnung ungültiger
+  Porteingaben, die "Verbindungstest"-Taste (einschließlich erfolgreicher
+  Erreichbarkeitsprüfung gegen einen tatsächlich laufenden HTTP-Server), der
+  Bestätigungsdialog vor dem Löschen (sowohl Abbrechen als auch Ausführen)
+  sowie der JSON-Export. Es traten keine JS-Fehler in der Konsole auf.
+- Nginx 1.24 (Standard unter Ubuntu 24.04) und Apache 2.4 wurden tatsächlich
+  installiert; die von `gen-vhost.sh` für alle fünf Stacks
+  (static/proxy/wordpress/laravel/fastapi) erzeugten Konfigurationen wurden
+  mit einem selbstsignierten Zertifikat sowohl mit `nginx -t` als auch mit
+  `apache2ctl configtest` syntaktisch geprüft; für die Stacks static/proxy
+  wurde zusätzlich real gestartet und per `curl` funktional geprüft
+  (HTTP→HTTPS-Weiterleitung, statisches Ausliefern, 502-Antwort über den
+  Reverse-Proxy).
+- Der tatsächliche Zertifikatsbezug bei Let's Encrypt über certbot
+  (ACME-Verifizierung) sowie das Verhalten von `scripts/deploy-vps.ps1` in
+  einer echten VPS-Umgebung wurden nicht verifiziert, da für diese Sitzung
+  weder eine öffentliche Domain noch ein echter VPS noch eine
+  Windows-Umgebung zur Verfügung standen (Details siehe CLAUDE.md).
 
 ## Struktur
 
@@ -184,24 +246,22 @@ stimmen die Ziele mit der Verbindungsauswahl im Browser überein.
 aruaru-web/
 ├── Cargo.toml            # crate-type = ["cdylib", "rlib"], Abhängigkeiten wasm-bindgen/web-sys
 ├── src/
-│   ├── lib.rs             # Einstiegspunkt, Tab-Umschaltung, Verdrahtung der Events
+│   ├── lib.rs             # Einstiegspunkt, Verdrahtung der Events
 │   ├── dom.rs             # gemeinsame Hilfsfunktionen für DOM-Zugriffe (Datei-Download usw.)
-│   ├── graphql.rs         # fetch-Aufrufe gegen /graphql
-│   ├── render.rs          # Rendering der SQL-Ergebnisse und der Registry-Zusammenfassung, CSV-Ausgabe
-│   ├── profiles.rs        # Sitenverwaltung (Verbindungsprofile, Speicherung in localStorage, JSON-Import/-Export)
-│   ├── history.rs         # SQL-Query-Verlauf (letzte 10 Einträge, Speicherung in localStorage)
-│   └── shell.rs           # HTML-Shell (Tabs, Formulare)
+│   ├── profiles.rs        # Sitenverwaltung (Verbindungsprofile, Speicherung in localStorage, Verbindungstest, JSON-Import/-Export)
+│   └── shell.rs           # HTML-Shell
 ├── index.html             # Loader für pkg/ + CSS
 ├── pkg/                   # von wasm-bindgen erzeugte Artefakte (von .gitignore ausgeschlossen, wird beim Build neu erzeugt)
 ├── scripts/
 │   ├── serve.sh            # startet den Dev-Server, bereitgestellt über eine beliebige IP-Adresse
-│   ├── gen-vhost.sh         # erzeugt einen Nginx-/Apache-vhost aus Domain/IP
+│   ├── deploy-vps.ps1       # Build, Upload und Start auf einem VPS aus Windows PowerShell
+│   ├── gen-vhost.sh         # erzeugt einen Nginx-/Apache-vhost aus Domain/IP/Stack
 │   ├── setup-tls.sh         # Bezug eines Let's-Encrypt-Zertifikats
 │   ├── check-tls.sh         # prüft das Ablaufdatum des Zertifikats einer einzelnen Domain
 │   └── check-all-tls.sh     # prüft gesammelt das Ablaufdatum aller registrierten Domains
 ├── deploy/
-│   ├── nginx/vhost.conf.template
-│   ├── apache/vhost.conf.template
+│   ├── nginx/vhost-{static,proxy,wordpress,laravel,fastapi}.conf.template
+│   ├── apache/vhost-{static,proxy,wordpress,laravel,fastapi}.conf.template
 │   ├── systemd/             # vollständiger Satz an Timern für automatische Erneuerung (renew) und Überwachung (monitor)
 │   └── generated/           # Ausgabe von gen-vhost.sh (von .gitignore ausgeschlossen)
 └── CLAUDE.md
@@ -209,7 +269,13 @@ aruaru-web/
 
 ## Zugehörige Projekte
 
-- **aruaru-db** (das Backend, mit dem sich diese UI verbindet): https://github.com/aon-co-jp/aruaru-db
+Da dieses Repository ein generisches, datenbankunabhängiges Deployment- und
+Ops-Tool ist, lässt es sich zusammen mit den folgenden Projekten **kombiniert
+einsetzen** (Eintragung im "Sitenverwaltung"-Bildschirm bzw. Nutzung als
+Reverse-Proxy-Ziel über `--stack=proxy`; in den Inhalt der jeweiligen
+Repositories wird dabei nicht eingegriffen):
+
+- **aruaru-db**: https://github.com/aon-co-jp/aruaru-db
 - **open-runo**: https://github.com/aon-co-jp/open-runo
 - **open-web-server**: https://github.com/aon-co-jp/open-web-server
 - **poem-cosmo-tauri**: https://github.com/aon-co-jp/poem-cosmo-tauri
