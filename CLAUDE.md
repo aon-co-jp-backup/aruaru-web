@@ -9,21 +9,30 @@
 
 ## このリポジトリの役割
 
-`aruaru-web` は `aruaru-db`(分散 Git-on-SQL データベース)向けの Web UI。
-`aruaru-db` が GraphQL(`/graphql`)で公開する `sql`/`registrySummary` 等の
-クエリをブラウザから実行し、結果を表示する。**このリポジトリは
+`aruaru-web` は「**第二のKUSANAGI**」を目指す、DBに依存しない汎用の
+デプロイ・運用ツール。WordPress高速化サーバー構築キット「KUSANAGI」の
+ように、アプリのアップロード後にIPアドレスから起動し、ドメイン登録・
+HTTPS化を簡単に自動適用できることを目指す。**このリポジトリは
 `aruaru-db`/`open-runo`/`open-web-server` とは別チームの並行作業対象であり、
 それらのディレクトリには立ち入らない**(README/CLAUDE.mdの参照のみ可)。
 
-**方針(2026-07-12、ユーザー確認済み)**: `aruaru-web` は「**第二のKUSANAGI**」
-(WordPress高速化サーバー構築キットKUSANAGIのような、アプリのアップロード後に
-IPアドレスから起動し、ドメイン登録・HTTPS化を簡単に自動適用できる運用ツール)
-を目指す。具体的には「サイト管理タブ」「IPアドレス起動」「vhost生成・HTTPS
-自動設定/監視/更新」が中核機能であり、**aruaru-db側のDB機能を深掘りする方向
-(VcsQueryのブランチ/ログ/Diff拡張、レジストリ詳細一覧など)は意図的に対象外**
-とする。SQL実行・レジストリ集計という最小限のaruaru-db接続機能を超えたDB管理
-UIの拡張は行わない(過去に一度実装したが、ユーザーの意図と異なったため撤去
-済み。詳細はHANDOFFログ参照)。
+**方針(2026-07-13、ユーザー確認済み・重要な方針転換)**: 2026-07-12時点では
+「aruaru-db向けWeb UI」として、SQL実行・レジストリ集計というaruaru-dbへの
+最小限のGraphQL接続機能を維持していたが、2026-07-13にユーザーから
+「DBは一切必要ない」という明確な指示を受け、**SQL実行・GraphQL fetchを
+含むDB接続機能をコードから完全に撤去**した。現在の `aruaru-web` は
+特定のデータベース製品に依存しない汎用ツールであり、中核機能は:
+- **サイト管理**(接続先の複数登録・切替・接続テスト・JSON入出力)
+- **IPアドレス起動**(`scripts/serve.sh`)
+- **vhost生成・高速化・HTTPS自動設定/監視/更新**(`scripts/gen-vhost.sh`
+  他。WordPress/Laravel/FastAPI/汎用リバースプロキシの5スタック対応)
+- **VPSへのデプロイ**(`scripts/deploy-vps.ps1`、Windows PowerShellから
+  ビルド・アップロード・起動を自動化)
+
+の4つ。`aruaru-db`・`open-web-server`・`open-raid-z` 系のプロジェクトとは
+**併用可能**(「サイト管理」画面への登録や `gen-vhost.sh --stack=proxy` の
+リバースプロキシ対象として利用できる)にしつつ、それらのDB固有機能を
+このリポジトリで深追いすることはしない。詳細はHANDOFFログ参照。
 
 ## フロントエンド(2026-07-10、方針更新 — open-raid-zより)
 
@@ -108,51 +117,38 @@ python -m http.server 8080   # index.html + pkg/ を配信
 ## 現状(このリポジトリ固有)
 
 - 2026-07-11 に本リポジトリを空の状態からブートストラップ(初回コミット)。
-- 単一クレート構成(`Cargo.toml`、`src/` は複数モジュールに分割:
-  `lib.rs`/`dom.rs`/`graphql.rs`/`render.rs`/`profiles.rs`/`history.rs`/
-  `shell.rs`。workspaceではなく単体crate)。`crate-type = ["cdylib", "rlib"]`、
-  依存は `wasm-bindgen`/`wasm-bindgen-futures`/`js-sys`/`web-sys`/`serde`/
-  `serde_json` のみ。重量級フレームワーク無し。
-- 実装済み機能:
-  - タブ式UI(SQL実行 / バージョン管理 / レジストリ集計 / サイト管理)。
-    `aruaru-graphql` `/graphql` への実 `fetch()`(`sql`/`registrySummary`/
-    `registry`/`currentBranch`/`branches`/`log`/`diff` クエリ)、接続失敗時は
-    実スキーマと同形のオフラインサンプルをレンダリングしてその旨を明示。
-  - **バージョン管理タブ**: `aruaru-db/crates/aruaru-graphql/src/lib.rs` の
-    `VcsQuery` 実スキーマ(推測ではなく実ソースを確認して実装)に基づき、
-    ブランチ一覧(`branches`/`currentBranch`)・コミットログ(`log(limit)`)・
-    ブランチ間Diff(`diff(from, to)`、追加/削除/変更件数)を取得できる。
-  - **レジストリ集計タブ**: `registrySummary`(カード表示)に加え、
-    `AdminQuery::registry`(`aruaru-db/crates/aruaru-graphql/src/
-    admin_resolvers.rs` の実スキーマ)による**登録DB一覧**(名前/カテゴリ/
-    ワイヤー互換/状態/順位/スコア/更新日時)をテーブル表示・CSVエクスポート
-    できる。
-  - **サイト管理タブ**(`src/profiles.rs`): aruaru-web用・他プロジェクト用の
-    接続先(名前/用途/プロトコル/ホスト(IP・ドメイン・サブドメイン)/ポート/
-    パス/バックエンドスタック名)を複数登録・編集・削除でき、`localStorage`
-    (`aruaru_web_site_profiles_v1`)に保存、選択中のサイトがSQL/レジストリ
-    タブのエンドポイントに自動反映される。KUSANAGIのサイト一覧に相当する
-    最小限の管理UIで、実際のDNS登録は行わない。カードごとに**「接続テスト」
-    ボタン**(アクティブなサイトを変えずに疎通確認のみ実行)、ポート番号の
-    入力検証(1〜65535以外は保存を拒否しエラー表示)、**削除前の確認
-    ダイアログ**、登録済みサイト一覧の**JSONエクスポート/インポート**
-    (`FileReader`、バックアップ・他ブラウザへの持ち出し用、インポート時も
-    確認ダイアログ)を実装。
-  - **SQLタブの実用性向上**: 直近10件の**クエリ履歴**(`src/history.rs`、
-    `localStorage`保存、クリックで再読込、ホバーで全文表示のツールチップ)、
-    **Ctrl+Enter / Cmd+Enterでの実行ショートカット**、実行結果の
-    **CSVエクスポート**(`Blob`+`Url`+`<a download>`、`dom::trigger_download`
-    として共通化)、実行中はボタンを無効化してラベルを「実行中…」に変更、
-    結果テーブルは行数表示・スクロール可能・ヘッダー固定(sticky)、
-    `#status` に `aria-live="polite"` を付与しスクリーンリーダーにも状態
-    変化を通知。
-  - **IPアドレスからの起動**: `scripts/serve.sh <BIND_IP> <PORT>` でローカル
-    開発サーバーを任意のIP/ポートにbind。
-  - **vhost生成・HTTPS自動設定**: `scripts/gen-vhost.sh <DOMAIN> <IP>
-    <UPSTREAM> [WEBROOT]` で Nginx/Apache の vhost(HTTP→HTTPSリダイレクト、
-    ACME challenge許可込み、`deploy/nginx|apache/vhost.conf.template` から
-    生成、出力は `.gitignore` 対象の `deploy/generated/`)を作成し、対象
-    ドメインを `deploy/generated/domains.txt` に記録する。
+- 単一クレート構成(`Cargo.toml`、`src/` は `lib.rs`/`dom.rs`/`profiles.rs`/
+  `shell.rs` の4モジュールのみ。workspaceではなく単体crate)。
+  `crate-type = ["cdylib", "rlib"]`、依存は `wasm-bindgen`/
+  `wasm-bindgen-futures`/`js-sys`/`web-sys`/`serde`/`serde_json` のみ。
+  重量級フレームワーク無し。**GraphQL/SQL関連の依存・コードは無い**
+  (2026-07-13に完全撤去、詳細はHANDOFF参照)。
+- 実装済み機能(2026-07-13時点):
+  - **サイト管理画面**(`src/profiles.rs`、単一画面・タブ無し): aruaru-web
+    自身・WordPress・Laravel・FastAPIなど任意のバックエンドスタックの
+    デプロイ先(名前/用途[self/other]/プロトコル/ホスト/ポート/パス/
+    バックエンドスタック名)を複数登録・編集・削除でき、`localStorage`
+    (`aruaru_web_site_profiles_v2`)に保存。カードごとに**「接続テスト」
+    ボタン**(選択中のサイトを変えずに、`fetch(url, {mode: 'no-cors'})`
+    による汎用HTTP到達性チェックのみ実行。GraphQL等特定プロトコルには
+    依存しない)、ポート番号の入力検証(1〜65535以外は保存を拒否)、
+    **削除前の確認ダイアログ**、登録済みサイト一覧の**JSONエクスポート/
+    インポート**(`FileReader`、バックアップ・他ブラウザへの持ち出し用、
+    インポート時も確認ダイアログ)を実装。
+  - **IPアドレスからの起動**: `scripts/serve.sh <BIND_IP> <PORT>` でローカル/
+    VPS上の任意のIP/ポートにbind。
+  - **vhost生成・高速化・HTTPS自動設定**: `scripts/gen-vhost.sh
+    [--stack=STACK] <DOMAIN> <BIND_IP> [UPSTREAM] [WEBROOT]` で、
+    `static`(静的サイト。aruaru-web自身向け)・`proxy`(aruaru-db・
+    open-web-server・open-raid-z系や任意のHTTPバックエンド向け汎用
+    リバースプロキシ、named upstream + keepaliveで高速化)・
+    `wordpress`・`laravel`(いずれもPHP-FPM + gzip/静的キャッシュ/
+    FastCGIバッファ調整)・`fastapi`(ASGIサーバーへのリバースプロキシ、
+    WebSocket/ストリーミング対応)の5スタックに対応した Nginx/Apache の
+    vhost(HTTP→HTTPSリダイレクト、ACME challenge許可込み)を
+    `deploy/{nginx,apache}/vhost-<stack>.conf.template` から生成する
+    (出力は `.gitignore` 対象の `deploy/generated/`)。対象ドメインは
+    `deploy/generated/domains.txt` に記録される。
   - **HTTPS自動監視・自動更新**: `scripts/setup-tls.sh` で certbot による
     Let's Encrypt証明書取得、`scripts/check-tls.sh`/`check-all-tls.sh` で
     有効期限監視、`deploy/systemd/install-systemd-units.sh` で
@@ -160,51 +156,91 @@ python -m http.server 8080   # index.html + pkg/ を配信
     `aruaru-tls-monitor.timer`(1日1回、登録済み全ドメインの失効監視)を
     有効化する。実際のドメイン取得・DNSレコード登録(レジストラ操作)は
     ここでは行わない(利用者が別途実施する前提)。
+  - **VPSへのデプロイ**: `scripts/deploy-vps.ps1`(Windows PowerShell)で、
+    ローカルでの `cargo build`/`wasm-bindgen` → `scp` でのVPSへの
+    アップロード(`open-web-server` の同時アップロードにも対応、
+    `-OpenWebServerPath` パラメータ)→ `ssh` 経由での `scripts/serve.sh`
+    起動、までを自動化する。
 - `cargo build --target wasm32-unknown-unknown` / `cargo clippy --target
   wasm32-unknown-unknown` ともに警告0件で成功(このパスで確認済み)。
-  `scripts/gen-vhost.sh` は実際に実行し、生成された `.nginx.conf`/
-  `.apache.conf`/`domains.txt` の中身を目視確認済み。全シェルスクリプトは
-  `bash -n` で構文検証済み。
-- `todo!()`/`unimplemented!()`/TODO/FIXMEマーカーは0件(実装した範囲は
-  スタブなしで完結)。
-- `wasm-bindgen-cli 0.2.126` を導入して `pkg/` を生成し、実Chromium
-  (Playwright)で `index.html` を開き、以下を実クリック/実操作で確認済み:
-  タブ切替、SQL実行→オフラインフォールバック描画、クエリ履歴への記録と
-  再読込・ホバー時のツールチップ、Ctrl+Enterショートカット、CSVエクスポート
-  (実ダウンロード発火)、レジストリ集計、サイト管理タブでの登録済みサイト
-  表示・新規追加・不正ポート入力の拒否・サイト選択によるアクティブ切替・
-  接続テストボタン・削除確認ダイアログ(キャンセル/実行の両方)・JSON
-  エクスポート/インポートのラウンドトリップ。console上のJSエラーは無し
-  (意図した接続失敗ログのみ)。
-- **vhost/TLS周りの実サーバー検証(今回のパスで実施)**: このセッションの
-  コンテナに実際に Nginx 1.24(Ubuntu 24.04標準)・Apache 2.4・certbot を
-  導入し、`scripts/gen-vhost.sh` の生成物を自己署名証明書と組み合わせて
-  `nginx -t` / `apache2ctl configtest` で実構文検証 → 両方とも実際に
-  起動して `curl` で機能検証(HTTP→HTTPSリダイレクト、ACME challengeパスは
-  リダイレクト対象外、HTTPS配信、`/graphql`へのリバースプロキシで
-  502/503が正しく返る)まで確認。この過程で**実バグを発見・修正**:
-  `deploy/nginx/vhost.conf.template` の `listen ... ssl; http2 on;`
-  (Nginx 1.25.1+ 専用の新記法)が Ubuntu 24.04 標準の Nginx 1.24 では
-  `unknown directive "http2"` で起動失敗することが判明したため、
-  旧来互換の `listen ... ssl http2;` 記法に修正。`scripts/check-tls.sh`も
-  実際に起動したHTTPSサーバー(自己署名証明書)に対して実行し、
-  WARN/healthy/ERRORの3状態すべてが正しく動作することを確認。
-  `deploy/systemd/*.service`・`*.timer`(monitor含む)は
-  `systemd-analyze verify` で全てエラー0件。
-  一方、**実際の certbot による Let's Encrypt 発行は未検証のまま**:
-  (1) 実際のパブリックドメイン・外部到達可能なIPが無いため ACME HTTP-01
-  チャレンジ自体を検証できない、(2) このコンテナの `/usr/bin/python3`
-  (3.11、pyenv等の別ビルド)と apt版 `python3-cffi`(cpython-312向け
-  ビルド)のABI不一致により、apt版certbotバイナリ自体が起動時に
-  `ModuleNotFoundError: No module named '_cffi_backend'` で落ちる
-  (このコンテナ環境固有の問題で、本リポジトリのスクリプトの不具合ではない)。
-  次回、実際にパブリックドメイン+到達可能なサーバーで再検証すること。
-- README(ルート、英語以下9言語)は全て最新の機能セット(サイト管理・
-  IPアドレス起動・HTTPS自動化・SQLクエリ履歴/CSV/ショートカット)に同期
-  済み。コードブロック(コマンド・パス・URL・ライセンス識別子)は各言語版
-  でも翻訳せず原文のまま。
+  `todo!()`/`unimplemented!()`/TODO/FIXMEマーカーは0件。
+- **今回のパスで実施した実機検証**:
+  - `wasm-bindgen` → Playwright(Chromium)で、サイト管理画面のみの単一画面
+    UI(タブ・SQL入力欄が完全に消えていること)、サイト新規追加・不正
+    ポート入力の拒否・接続テスト(**実際に稼働中のPythonの
+    `http.server`への到達性確認が成功すること**まで確認)・サイト選択・
+    削除確認ダイアログ(キャンセル/実行の両方)・JSONエクスポートを実
+    クリックで確認済み。console上のJSエラーは無し。
+  - `scripts/gen-vhost.sh` の全5スタック(static/proxy/wordpress/laravel/
+    fastapi)の生成物を、実際に導入したNginx 1.24・Apache 2.4に対して
+    `nginx -t` / `apache2ctl configtest` の両方で構文検証(全てエラー0件、
+    proxy/fastapiスタックのnamed upstreamも含めて検証)。static/proxy
+    スタックは実起動して `curl` で機能検証(HTTP→HTTPSリダイレクト、
+    静的ファイル配信、リバースプロキシ経由の502応答)まで確認済み。
+  - `scripts/deploy-vps.ps1`(PowerShell)は、このコンテナにPowerShell
+    ランタイムが無く、かつ実VPS環境も無いため、コード目視レビューのみで
+    実行検証はできていない(次回、実際にWindows環境+VPSがあれば検証)。
+  - README(ルート、英語以下9言語)は全て新しい方針(DB機能撤去・
+    第二のKUSANAGI路線・5スタックのvhost高速化・VPSデプロイ)に同期済み。
+    コードブロック(コマンド・パス・URL・ライセンス識別子)は各言語版でも
+    翻訳せず原文のまま。
 
 ## HANDOFF(直近の自動巡回ログ、上が最新)
+
+- **2026-07-13(9回目パス)**: ユーザーから、8回目パスよりさらに踏み込んだ
+  明確な指示:「DBは一切必要ないです」「第二のKUSANAGI(アプリの
+  アップロード後にIPアドレスで起動→ドメイン登録・HTTPS自動化)を中核に
+  据え」「KUSANAGIの様にWordPress/PHP+Laravel/Python+FastAPIなどのWEBを
+  高速化してみて」「open-web-server/aruaru-db/open-raid-zなどと併用も
+  出来るようにして」。これを受け、8回目パスで残していた
+  `sql`/`registrySummary` へのGraphQL fetch(SQL実行・レジストリ集計)を
+  含む**DB接続機能を完全に撤去**し、DBに依存しない汎用デプロイツールへ
+  刷新した:
+  - `src/graphql.rs`・`render.rs`・`history.rs` を削除(GraphQL fetch・
+    結果レンダリング・SQLクエリ履歴のロジックを全廃)。
+  - `src/profiles.rs`: 「接続テスト」をGraphQLクエリから
+    `fetch(url, {mode: 'no-cors'})` による汎用HTTP到達性チェックに変更
+    (任意の外部サイトはCORSヘッダを持たないことが多いため)。
+    `purpose` の値を `aruaru-web`/`other` から `self`/`other` に整理し、
+    ストレージキーを `_v1` → `_v2` に変更(スキーマ変更のため)。
+  - `src/shell.rs`・`lib.rs`: タブ切り替えUI(SQL実行/レジストリ集計/
+    サイト管理)を廃止し、サイト管理を唯一の単一画面に統合。
+  - `Cargo.toml`・`index.html`: 不要になった `HtmlTextAreaElement`/
+    `KeyboardEvent`/`CssStyleDeclaration`/`DomTokenList` 等のweb-sys
+    機能とタブ/テーブル用CSSを削減。
+  - **vhost高速化(KUSANAGI風)**: `deploy/{nginx,apache}/` の汎用
+    `vhost.conf.template` を、`vhost-{static,proxy,wordpress,laravel,
+    fastapi}.conf.template` の5スタックに分割・新設。`static`=静的サイト、
+    `proxy`=aruaru-db/open-web-server/open-raid-z系や任意バックエンド向け
+    汎用リバースプロキシ(named upstream + keepaliveで高速化)、
+    `wordpress`/`laravel`=PHP-FPM + gzip/静的キャッシュ/FastCGIバッファ
+    調整、`fastapi`=ASGIリバースプロキシ(WebSocket対応)。
+    `scripts/gen-vhost.sh` に `--stack=STACK` オプションを追加し、
+    ドメインごとに一意な `UPSTREAM_NAME`(nginxのnamed upstream衝突回避)を
+    自動生成するようにした。
+  - **VPSデプロイ**: `scripts/deploy-vps.ps1`(Windows PowerShell)を新設。
+    ローカルビルド→`scp`でのVPSアップロード(`open-web-server`の同時
+    アップロードにも対応)→`ssh`経由での起動、を自動化。
+  - README(全10言語)・CLAUDE.mdを新方針に合わせて全面改訂。「関連
+    プロジェクト」節に、aruaru-db/open-web-server/open-raid-z等とは
+    「併用可能」(サイト管理画面への登録や`--stack=proxy`でのリバース
+    プロキシ対象として利用できる)である旨を明記。
+  - `cargo build`/`cargo clippy`(`--target wasm32-unknown-unknown`)は
+    警告0件。Playwright(Chromium)で、サイト管理単一画面への刷新・
+    実際に稼働中のHTTPサーバーへの接続テスト成功・追加/削除/検証/
+    エクスポートが正常動作することを確認。`gen-vhost.sh`の全5スタックは
+    実際に導入したNginx 1.24・Apache 2.4で`nginx -t`/`apache2ctl
+    configtest`の両方で構文検証(エラー0件)、static/proxyスタックは
+    実起動してcurl機能検証まで実施。
+  **今後の方針**: DB(特定のデータベース製品)への機能拡張は今後も
+  行わない。増分は「第二のKUSANAGI」路線(サイト管理・IPアドレス起動・
+  vhost高速化・HTTPS自動化・VPSデプロイ)の完成度向上に集中する。
+  **次回パスがすべきこと**: (1) 実際のWindows環境+VPSがあれば
+  `scripts/deploy-vps.ps1` の実行検証、(2) 実際にパブリックドメイン+
+  外部到達可能なサーバー環境があれば `scripts/setup-tls.sh` での実際の
+  Let's Encrypt発行を確認、(3) wordpress/laravel/fastapiスタックについても
+  実際のPHP-FPM/ASGIサーバーを用意できれば、static/proxyスタックと同様に
+  実起動してのcurl機能検証を行う。
 
 - **2026-07-12(8回目パス)**: ユーザーから明確な方針転換の指示:
   「第二のKUSANAGIで、このアプリをUPLOAD後にIPアドレスで起動して簡単に

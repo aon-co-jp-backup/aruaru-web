@@ -1,0 +1,40 @@
+# 静的サイト用 Apache VirtualHost テンプレート(スタック: static)。
+# aruaru-web自身(WASM + index.html)のような、バックエンドを持たない
+# 静的サイトの配信に使う。{{PLACEHOLDER}} は scripts/gen-vhost.sh が埋める。
+# 事前に mod_deflate / mod_expires / mod_headers / mod_rewrite を有効化
+# しておくこと(a2enmod deflate expires headers rewrite)。
+# TLS証明書は scripts/setup-tls.sh (Let's Encrypt / certbot) が取得・
+# 自動更新する。
+
+<VirtualHost {{IP}}:80>
+    ServerName {{DOMAIN}}
+    DocumentRoot "{{WEBROOT}}"
+
+    RewriteEngine On
+    RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</VirtualHost>
+
+<VirtualHost {{IP}}:443>
+    ServerName {{DOMAIN}}
+    DocumentRoot "{{WEBROOT}}"
+
+    SSLEngine on
+    SSLCertificateFile      /etc/letsencrypt/live/{{DOMAIN}}/fullchain.pem
+    SSLCertificateKeyFile   /etc/letsencrypt/live/{{DOMAIN}}/privkey.pem
+
+    <Directory "{{WEBROOT}}">
+        Require all granted
+        AllowOverride None
+    </Directory>
+
+    AddOutputFilterByType DEFLATE text/plain text/css application/json \
+        application/javascript application/wasm text/xml application/xml \
+        text/javascript image/svg+xml
+
+    <FilesMatch "\.(?:wasm|js|css|png|jpe?g|gif|ico|svg|woff2?)$">
+        ExpiresActive On
+        ExpiresDefault "access plus 30 days"
+        Header set Cache-Control "public, immutable"
+    </FilesMatch>
+</VirtualHost>
