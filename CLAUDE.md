@@ -7,14 +7,47 @@
 [`open-raid-z`](https://github.com/aon-co-jp/open-raid-z) の `CLAUDE.md`
 を正本とし、各プロジェクトへコピーして同期する。
 
-## このリポジトリの役割
+## このリポジトリの役割・現在のステータス(2026-07-13、廃止・後継決定)
+
+**このリポジトリは2026-07-13付けで機能開発を終了し、後継リポジトリへの
+移行が完了した(廃止/deprecated)。** 理由: `aruaru-web`が「第二の
+KUSANAGI」として開発していた機能は次の2系統に完全に分割され、
+両方とも本リポジトリの外へ移動済みであり、**本リポジトリに残る
+固有の役割が存在しない**ため。
+- (1) **サイト管理・IPアドレス起動・ドメイン/HTTPS登録・HTTPS自動監視/
+  自動発行/自動更新・VPSデプロイ**(=DB非依存の「簡単な運用」機能全て)
+  → 新設の [`open-easyweb`](https://github.com/aon-co-jp/open-easyweb)
+  へ移行済み。
+- (2) **KUSANAGI風のWeb高速化機能**(gzip圧縮・静的アセットの長期
+  キャッシュ・FastCGIバッファ調整・upstream keepaliveプーリング)
+  → Nginx/Apache設定生成という形ではなく、[`open-runo`](https://github.com/aon-co-jp/open-runo)/
+  [`poem-cosmo-tauri`](https://github.com/aon-co-jp/poem-cosmo-tauri)
+  側のネイティブRust実装(hyperミドルウェア、`with_compression`/
+  `with_static_cache_headers`)として統合済み。
+
+**判断の根拠**: 分離前の`aruaru-web`の役割は「DBに依存しない第二の
+KUSANAGI」の一点に尽きており、(1)(2)の分割で両方とも実体を失った
+——(1)は`open-easyweb`が名称・スコープともに正確に引き継ぎ、(2)は
+Nginx/Apache設定生成というアプローチ自体をやめてRustネイティブに
+再実装する方針転換のため、`aruaru-web`側に「高速化はしないが他は残す」
+という中間的な狭いスコープを残す合理性がない(README/CLAUDE.mdを
+含む全コンテンツが両後継リポジトリに実体としてコピー済みで、
+本リポジトリに残すことで得られる独自価値が無いため)。**今後、本
+リポジトリへの新規機能追加は行わない**。バグ報告や既存ユーザーへの
+参照目的でリポジトリ自体は残すが、開発は`open-easyweb`
+(easy-ops)・`open-runo`/`poem-cosmo-tauri`(高速化)側で継続する。
+
+---
+
+以下は分離前(2026-07-13以前)の記録として残す。
 
 `aruaru-web` は「**第二のKUSANAGI**」を目指す、DBに依存しない汎用の
-デプロイ・運用ツール。WordPress高速化サーバー構築キット「KUSANAGI」の
-ように、アプリのアップロード後にIPアドレスから起動し、ドメイン登録・
-HTTPS化を簡単に自動適用できることを目指す。**このリポジトリは
-`aruaru-db`/`open-runo`/`open-web-server` とは別チームの並行作業対象であり、
-それらのディレクトリには立ち入らない**(README/CLAUDE.mdの参照のみ可)。
+デプロイ・運用ツールだった。WordPress高速化サーバー構築キット
+「KUSANAGI」のように、アプリのアップロード後にIPアドレスから起動し、
+ドメイン登録・HTTPS化を簡単に自動適用できることを目指していた。
+**このリポジトリは`aruaru-db`/`open-runo`/`open-web-server` とは
+別チームの並行作業対象であり、それらのディレクトリには立ち入らない**
+(README/CLAUDE.mdの参照のみ可)。
 
 **方針(2026-07-13、ユーザー確認済み・重要な方針転換)**: 2026-07-12時点では
 「aruaru-db向けWeb UI」として、SQL実行・レジストリ集計というaruaru-dbへの
@@ -191,6 +224,48 @@ python -m http.server 8080   # index.html + pkg/ を配信
     翻訳せず原文のまま。
 
 ## HANDOFF(直近の自動巡回ログ、上が最新)
+
+- **2026-07-13(11回目パス・最終パス、リポジトリ分割・廃止)**: ユーザーの
+  エコシステム再編指示を受け、`aruaru-web`を2系統に分割:
+  (1) DB非依存の「簡単な運用」機能(サイト管理・IPアドレス起動・
+  ドメイン/HTTPS登録・HTTPS自動監視/自動発行/自動更新・VPSデプロイ)を
+  新設の`open-easyweb`(https://github.com/aon-co-jp/open-easyweb)へ
+  移植(`src/*.rs`・`index.html`・`scripts/*`・`deploy/systemd/*`を
+  そのままブランディング変更のみでコピー、`deploy/nginx|apache/*`は
+  高速化ディレクティブ——gzip・expires/Cache-Control・fastcgi_buffers・
+  named upstream+keepalive——を全て削除した差分を新規作成)。
+  (2) KUSANAGI風のWeb高速化機能(gzip圧縮・静的アセット長期キャッシュ・
+  FastCGIバッファ調整・upstream keepaliveプーリング)は、Nginx/Apache
+  設定生成というアプローチ自体をやめ、`open-runo`/`poem-cosmo-tauri`
+  側のネイティブRust実装(hyperミドルウェア)として統合する方針に転換
+  ——両リポジトリの`crates/open-runo-router/src/middleware_hyper.rs`に
+  `with_static_cache_headers`(静的アセットへの`Cache-Control:
+  public, max-age=N, immutable`付与、Nginxの`expires`/`Cache-Control`
+  ディレクティブに相当)を新規実装(gzip応答圧縮は既存の
+  `with_compression`が既にNginxの`gzip`ディレクティブ相当をカバー
+  済みだったため実装済みとして確認のみ)。FastCGIバッファ調整・named
+  upstream keepaliveプーリングはNginx固有のリバースプロキシ実装詳細
+  であり、`open-runo`/`poem-cosmo-tauri`はNginxの代わりとなる
+  Rustサーバー自体であってNginxの手前に立つプロキシではないため、
+  移植すべき同等概念が無いと判断(hyperのkeep-alive接続プーリングは
+  クライアント→このサーバー間の話であり、Nginx→上流アプリという
+  構図とは対応しない)。実バイナリ+curlで
+  `Cache-Control: public, max-age=2592000, immutable`が静的アセット
+  (`/pkg/*.js`)にのみ付与され`/health`には付与されないことを確認済み
+  (詳細は両リポジトリの同日CLAUDE.md HANDOFF参照)。
+  **本リポジトリの今後の方針(ユーザーへの確認なしで判断・明記)**:
+  分割後の`aruaru-web`には、DB非依存の運用機能(`open-easyweb`が
+  正確に継承)ともKUSANAGI風高速化機能(`open-runo`/`poem-cosmo-tauri`
+  が継承)とも異なる、固有に残すべきスコープが存在しないと判断し、
+  **本リポジトリを廃止(deprecated)とする**。今後新規の機能開発は
+  行わない。上記「このリポジトリの役割・現在のステータス」節に判断
+  根拠を明記済み。README(ルート+全9言語)は今回未更新——廃止済み
+  リポジトリのREADMEを更新する優先度は低いと判断し、CLAUDE.mdでの
+  ステータス明記のみに留めた(次回何らかの理由でこのリポジトリに
+  戻ってくることがあれば、READMEにも同様の廃止notice追記を検討)。
+  次回パスがすべきこと: 通常は無い(廃止済みのため)。もしユーザーから
+  再開の指示があれば、まずこのHANDOFFエントリと`open-easyweb`/
+  `open-runo`/`poem-cosmo-tauri`側の対応するエントリを確認すること。
 
 - **2026-07-13(10回目パス)**: 9回目パスで残っていた作業を完了。
   (1) README全10言語(English/Chinese/Korea/Spain/France/Germany/Italy/
