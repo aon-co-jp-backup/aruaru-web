@@ -1,17 +1,17 @@
 # aruaru-web
 
-**واجهة ويب حدّية لـ aruaru-db (Rust → WebAssembly، بدون أي إطار عمل)**
+**"كوساناغي الثانية" — أداة تشغيل تتيح تشغيل التطبيق من عنوان IP بعد رفعه،
+مع تطبيق تلقائي وسهل لتسجيل النطاق (domain) وتفعيل HTTPS (مبنية بلغة
+Rust → WebAssembly، بدون أي إطار عمل)**
 
-هذه لوحة تحكم بتبويبات تستدعي فعلياً من داخل المتصفح استعلام `sql` واستعلام
-`registrySummary` (تجميع سجلّ قواعد البيانات المتوافقة) اللذين تعرضهما
-`aruaru-db` (قاعدة بيانات موزّعة من نوع Git-on-SQL) عبر GraphQL (`/graphql`)،
-وتعرض النتائج. إضافة إلى ذلك، تسعى الواجهة لأن تكون **"KUSANAGI الثانية"**
-(أداة تشغيل تشبه KUSANAGI، حزمة بناء خوادم تسريع WordPress، حيث يمكن بعد رفع
-التطبيق تشغيله من عنوان IP، وتطبيق تسجيل النطاق وتفعيل HTTPS تلقائياً
-وبسهولة)، وتضم تبويب **"إدارة المواقع"** الذي يتيح تسجيل عدة جهات اتصال (لأجل
-aruaru-web ولمشاريع أخرى) والتبديل بينها، إلى جانب مجموعة كاملة من أدوات
-التشغيل من عنوان IP، وتوليد vhost، والإعداد التلقائي لبروتوكول HTTPS (TLS)
-ومراقبته وتجديده.
+على غرار "كوساناغي" (KUSANAGI)، حزمة بناء الخوادم المتخصصة في تسريع
+ووردبريس، تهدف هذه الأداة إلى تغطية المسار الكامل: بعد رفع التطبيق،
+**التشغيل من عنوان IP ← تبسيط تسجيل النطاق ← أتمتة HTTPS**. يمكنها توليد
+إعدادات بروكسي عكسي (reverse proxy) لـ Nginx/Apache لتسريع مواقع ويب مبنية
+على أي حزمة تقنية للخادم الخلفي مثل ووردبريس، أو PHP + Laravel، أو
+Python + FastAPI، كما تحتوي على شاشة "إدارة المواقع" التي تتيح تسجيل
+وتبديل واختبار اتصال عدة مواقع مستهدفة. **لا تملك أي وظيفة اتصال بقاعدة
+بيانات** (وهذا خارج النطاق عمداً).
 
 📖 لغات أخرى: [日本語](README-Japan.md) / [English](README-English.md) /
 [中文](README-Chinese.md) / [한국어](README-Korea.md) / [Español](README-Spain.md) /
@@ -22,178 +22,234 @@ aruaru-web ولمشاريع أخرى) والتبديل بينها، إلى جا�
 
 ## ما هو متاح الآن
 
-- إرسال طلبات GraphQL فعلية عبر `fetch()` إلى نقطة النهاية `/graphql` الخاصة
-  بـ `aruaru-graphql` (`aruaru-db/crates/aruaru-graphql`):
-  - `sql(query: String!): QueryResultGql` — تنفيذ أي استعلام SQL وعرض
-    `columns`/`rows`/`commandTag` في جدول
-  - `registrySummary: RegistrySummaryGql` — عرض تجميع سجلّ قواعد البيانات
-    المتوافقة (أكثر من 150 قاعدة) في بطاقات
-- في حال عدم تشغيل `aruaru-server` أو تعذّر الاتصال به، يتم عرض **بيانات
-  نموذجية بنفس شكل المخطط الفعلي** فوراً، مع توضيح صريح أنها "عيّنة دون
-  اتصال" (تم التحقق من هذا السلوك فعلياً في متصفح حقيقي — انظر قسم "التحقق
-  من عمل التطبيق" أدناه).
-- **تبويب إدارة المواقع**: يتيح تسجيل عدة جهات اتصال (لأجل aruaru-web ولمشاريع
-  أخرى) تتضمن عنوان IP/نطاق/نطاق فرعي/منفذ/مسار، وحفظها في `localStorage`
-  والتبديل بينها بنقرة واحدة. يتبع حقل نقطة النهاية في تبويبَي SQL/تجميع
-  السجلّ تلقائياً الموقع المُختار حالياً. تضم كل بطاقة **زر "اختبار الاتصال"**
-  الذي يتحقق من الاتصال دون تغيير الموقع النشط، وتحقّقاً من صحة رقم المنفذ
-  (1 إلى 65535)، و**تصدير/استيراد بصيغة JSON** لقائمة المواقع المسجَّلة
-  (لأغراض النسخ الاحتياطي والنقل إلى متصفح آخر)، ومربع حوار تأكيد قبل الحذف.
-- **سهولة استخدام تبويب SQL**: **سجلّ لآخر 10 استعلامات** (يُعاد تحميلها
-  بالنقر، ويظهر النص الكامل عند التحويم بالماوس)، **اختصار تنفيذ باستخدام
-  Ctrl+Enter أو Cmd+Enter**، **تصدير نتائج التنفيذ بصيغة CSV**، تعطيل الزر
-  أثناء التنفيذ، وجدول نتائج يعرض عدد الصفوف وقابل للتمرير مع رأس ثابت
-  (sticky).
-- **الإعداد التلقائي لبروتوكول HTTPS (TLS) ومراقبته وتجديده تلقائياً**:
-  يقوم `scripts/gen-vhost.sh` بتوليد إعدادات vhost لـ Nginx/Apache (تتضمن
-  إعادة التوجيه من HTTP إلى HTTPS)، ويقوم `scripts/setup-tls.sh` بالحصول على
-  شهادة Let's Encrypt (عبر certbot)، ويمكن لـ
-  `deploy/systemd/install-systemd-units.sh` تفعيل "تجديد تلقائي مرتين
-  يومياً" (`aruaru-tls-renew.timer`) و"مراقبة انتهاء الصلاحية مرة واحدة
-  يومياً" (`aruaru-tls-monitor.timer` ← `scripts/check-all-tls.sh`).
-  للتفاصيل انظر قسم "HTTPS وتسجيل النطاقات/النطاقات الفرعية".
+- **شاشة إدارة المواقع**: يمكن تسجيل عدة وجهات نشر (عنوان IP/نطاق/نطاق
+  فرعي/منفذ/مسار) لأي حزمة تقنية للخادم الخلفي، سواء لـ aruaru-web نفسها أو
+  ووردبريس أو Laravel أو FastAPI، مع الحفظ في `localStorage` واختيار
+  الموقع واختبار الاتصال بنقرة واحدة (يعادل قائمة المواقع في KUSANAGI).
+  تحتوي كل بطاقة على **زر "اختبار الاتصال"** (ينفذ فحص وصول HTTP بسيطًا فقط
+  دون تغيير الموقع المُحدد حالياً)، وتحقق من صحة إدخال رقم المنفذ
+  (1 إلى 65535)، و**تصدير/استيراد JSON** لقائمة المواقع المسجلة (لأغراض
+  النسخ الاحتياطي والنقل إلى متصفح آخر)، وحوار تأكيد قبل الحذف.
+- **التشغيل من عنوان IP**: يتيح `scripts/serve.sh` البث بربط أي عنوان
+  IP/منفذ محليًا أو على VPS.
+- **توليد vhost والتسريع وأتمتة HTTPS**: يقوم `scripts/gen-vhost.sh` بتوليد
+  إعدادات vhost لـ Nginx/Apache (تتضمن إعادة توجيه من HTTP إلى HTTPS) بناءً
+  على تركيبة النطاق/IP/الحزمة التقنية للخادم الخلفي. يدعم خمس حزم تقنية:
+  `static` (موقع ثابت)، و`proxy` (بروكسي عكسي عام لأنظمة مثل aruaru-db
+  وopen-web-server وopen-raid-z أو أي خادم خلفي HTTP آخر)، و`wordpress`،
+  و`laravel`، و`fastapi`، وتتضمن إعدادات تسريع خاصة بكل حزمة مثل ضغط gzip،
+  والتخزين المؤقت طويل المدى للأصول الثابتة (static assets)، وkeepalive
+  للـ upstream، وضبط مخزن FastCGI المؤقت (buffer).
+- **المراقبة والتحديث التلقائي لشهادات HTTPS (TLS)**: يتيح
+  `scripts/setup-tls.sh` الحصول على شهادة Let's Encrypt (عبر certbot)، بينما
+  يتيح `deploy/systemd/install-systemd-units.sh` تفعيل "التحديث التلقائي
+  مرتين يوميًا" (`aruaru-tls-renew.timer`) و"مراقبة انتهاء الصلاحية مرة
+  واحدة يوميًا" (`aruaru-tls-monitor.timer` ← `scripts/check-all-tls.sh`).
+- **النشر على VPS**: بمجرد تشغيل `scripts/deploy-vps.ps1` من Windows
+  PowerShell، يمكن أتمتة عملية البناء ← الرفع إلى VPS ← التشغيل بالكامل
+  (راجع قسم "النشر على VPS" أدناه للتفاصيل).
 
-## ما لا يمكن فعله حالياً (بصراحة تامة)
+## ما لا يمكن فعله حالياً (نطاق صادق)
 
-- **استعلامات إدارة الإصدارات في aruaru-db (الفروع/السجلّ/Diff وغيرها) أو
-  الحصول على قائمة تفصيلية بسجلّ قواعد البيانات — أي التعمّق في وظائف قاعدة
-  البيانات — مستبعدة من النطاق عمداً**. هدف هذا المستودع هو أداة تشغيل على
-  غرار "KUSANAGI الثانية" (تسهيل التشغيل من عنوان IP، وتبسيط تسجيل النطاق،
-  وأتمتة HTTPS)، وليس التخطيط لتوسيع واجهة إدارة قاعدة البيانات إلى ما هو
-  أبعد من الحد الأدنى من وظائف الاتصال بـ aruaru-db المتمثلة في تنفيذ SQL
-  وتجميع سجلّ قواعد البيانات.
-- عمليات GraphQL Mutation (إنشاء فروع، الدمج، زحف السجلّ، إلخ) غير منفَّذة.
-- المصادقة، وترقيم الصفحات، وإعادة المحاولة التلقائية عند حدوث خطأ غير
-  منفَّذة.
-- لا تقدَّم تجربة تطبيق أصلي مثل Tauri (فقط WASM يعمل داخل المتصفح).
-- **لا يقوم هذا المستودع فعلياً بشراء النطاقات أو تسجيل سجلات DNS (عبر
-  المسجِّل/Registrar)** لأن ذلك يترتب عليه تكلفة ويؤثر على خدمات خارجية.
-  ما يتم أتمتته هنا يقتصر على "توليد إعدادات vhost" و"الحصول على شهادة TLS
-  ومراقبتها وتجديدها تلقائياً" لنطاق تم الحصول عليه مسبقاً، أما تسجيل DNS
-  نفسه فيقوم به المستخدم لدى المسجِّل.
+- **لا تملك أي وظيفة اتصال بقاعدة بيانات (DB)**. الوظائف المرتبطة بمنتج
+  قاعدة بيانات معين، مثل تنفيذ SQL أو استعلامات GraphQL، خارج النطاق عمدًا
+  ولن تُنفَّذ مستقبلاً. حتى عند استخدام خادم خلفي معين مثل aruaru-db، يمكن
+  استخدام شاشة "إدارة المواقع" وتوليد vhost (`--stack=proxy`) **كأداة عامة
+  للبروكسي العكسي وإدارة النشر**، لكن لن تُقدَّم أي وظائف استعلام خاصة
+  بتلك القاعدة.
+- المصادقة (authentication)، والترقيم (pagination)، وإعادة المحاولة
+  التلقائية عند حدوث خطأ غير منفَّذة بعد.
+- لا تقدم تجربة تطبيق أصلي (native) على غرار Tauri (تعمل فقط كـ WASM داخل
+  المتصفح).
+- **لا يتم من هذا المستودع تسجيل نطاق فعلي أو سجلات DNS (عمليات لدى مسجّل
+  النطاقات)** لأن ذلك يتطلب تكاليف وتأثيرات على خدمات خارجية. ما تتم أتمتته
+  هنا يقتصر على "توليد إعدادات vhost" و"الحصول على شهادة TLS ومراقبتها
+  وتحديثها تلقائيًا" لنطاق تم الحصول عليه مسبقًا، أما تسجيل DNS نفسه فيقوم
+  به المستخدم لدى مسجّل النطاقات.
+- كما لا يتم من هذا المستودع التعاقد الفعلي على VPS (التعاقد مع مزود خادم
+  مستأجر).
 
 ## طريقة البناء
 
-لا يُستخدم Node.js ولا npm ولا TypeScript. يكتمل كل شيء بواسطة سلسلة أدوات
+لا تُستخدم Node.js أو npm أو TypeScript. يكتمل كل شيء باستخدام سلسلة أدوات
 Rust فقط.
 
 ```bash
-rustup target add wasm32-unknown-unknown        # 初回のみ
-cargo install wasm-bindgen-cli --version 0.2.126 # 初回のみ(Cargo.lockのバージョンと一致させること)
+rustup target add wasm32-unknown-unknown        # مرة واحدة فقط عند البدء
+cargo install wasm-bindgen-cli --version 0.2.126 # مرة واحدة فقط (يجب أن يطابق الإصدار في Cargo.lock)
 
 cargo build --target wasm32-unknown-unknown
 wasm-bindgen --target web --no-typescript --out-dir pkg \
   target/wasm32-unknown-unknown/debug/aruaru_web.wasm
 
-# 静的サーバーで配信して開く(何でもよい。例:)
+# قم بالبث عبر أي خادم ثابت وافتحه (أي خادم يناسب. مثال:)
 python -m http.server 8080
-# ブラウザで http://localhost:8080/index.html を開く
-```
-
-لتجربة تشغيل `aruaru-db` فعلياً:
-
-```bash
-cd ../aruaru-db
-cargo run -p aruaru-server -- --data ./data --raft-id 1   # :4000 に GraphQL が立つ
+# افتح http://localhost:8080/index.html في المتصفح
 ```
 
 ## التشغيل من عنوان IP
 
 ```bash
-scripts/serve.sh 0.0.0.0 8080        # 全インターフェースで待受
-scripts/serve.sh 192.168.1.50 8080   # 特定のIPアドレスのみで待受
+scripts/serve.sh 0.0.0.0 8080        # الاستماع على جميع الواجهات
+scripts/serve.sh 192.168.1.50 8080   # الاستماع على عنوان IP محدد فقط
 ```
 
-## HTTPS وتسجيل النطاقات/النطاقات الفرعية
+بعد التشغيل، يمكنك التحقق **بإدخال عنوان IP مباشرة في شريط عنوان المتصفح**
+(مثال: `http://192.168.1.50:8080/index.html`). النقطة المهمة هي إمكانية
+التحقق من العمل بعنوان IP فقط حتى قبل تسجيل أي نطاق.
 
-لا يقوم هذا المستودع نفسه بشراء النطاقات أو تسجيل سجلات DNS (لأن ذلك يتطلب
-عمليات لدى المسجِّل وتكاليف يتحمّلها المستخدم بشكل منفصل). ما يلي هو أتمتة
-محلية (تعادل "إضافة موقع" في KUSANAGI) لتسهيل تخصيص نطاق/نطاق فرعي تم الحصول
-عليه مسبقاً لاستخدام aruaru-web أو لمشاريع أخرى.
+## النشر على VPS (من Windows PowerShell)
+
+بعد استئجار خادم VPS، يمكن أتمتة عملية البناء ← الرفع ← التشغيل بالكامل
+بمجرد تشغيل `scripts/deploy-vps.ps1` من Windows PowerShell. عند استخدام
+`open-web-server` جنبًا إلى جنب، يمكن رفعه في الوقت نفسه (لا يتدخل هذا
+المستودع في محتوى `open-web-server` نفسه، بل يكتفي بتحديد مسار الرفع).
+
+```powershell
+# للرفع والتشغيل معًا (aruaru-web فقط)
+.\scripts\deploy-vps.ps1 -VpsHost 203.0.113.10 -VpsUser root -StartServer
+
+# لرفع open-web-server (F:\open-runo\open-web-server) في الوقت نفسه أيضًا
+.\scripts\deploy-vps.ps1 -VpsHost 203.0.113.10 -VpsUser root -StartServer `
+    -OpenWebServerPath "F:\open-runo\open-web-server"
+```
+
+يقوم هذا داخليًا بتنفيذ ما يعادل الخطوات التالية (يمكن تنفيذها يدويًا أيضًا):
+
+```powershell
+# 1. البناء محليًا
+cargo build --target wasm32-unknown-unknown
+wasm-bindgen --target web --no-typescript --out-dir pkg `
+    target/wasm32-unknown-unknown/debug/aruaru_web.wasm
+
+# 2. الرفع إلى VPS (عميل OpenSSH، مضمّن افتراضيًا في Windows 10 1809 وما بعده/11)
+ssh root@203.0.113.10 "mkdir -p /root/aruaru-web"
+scp -r .\index.html .\pkg .\scripts .\deploy .\Cargo.toml .\src `
+    root@203.0.113.10:/root/aruaru-web/
+
+# 3. التشغيل على VPS من عنوان IP
+ssh root@203.0.113.10 "cd /root/aruaru-web && bash scripts/serve.sh 0.0.0.0 8080"
+```
+
+بعد التشغيل، أدخل **عنوان IP الخاص بـ VPS في شريط عنوان المتصفح**
+(مثال: `http://203.0.113.10:8080/index.html`). إذا رغبت في إبقاء نسخة محلية
+مثل `F:\open-runo\aruaru-web` محدَّثة دائمًا، يكفي تنفيذ `git pull` على هذا
+المستودع:
+
+```powershell
+cd F:\open-runo\aruaru-web
+git fetch origin
+git pull origin <اسم الفرع>
+```
+
+**يمكن استخدامها دون رفع**: إذا أردت التجربة محليًا فقط دون استخدام VPS،
+يكفي تشغيل `scripts/serve.sh` محليًا كما هو موضّح في "التشغيل من عنوان IP"
+أعلاه. يمكن الوصول إليها من أجهزة أخرى على نفس الشبكة المحلية (LAN) عبر
+`http://<عنوان IP الخاص بالجهاز المحلي>:8080/`.
+
+## توليد vhost والتسريع وتسجيل النطاق/النطاق الفرعي
+
+لا يقوم هذا المستودع نفسه بالحصول على نطاق أو تسجيل سجلات DNS (لأن ذلك
+يتطلب عمليات لدى مسجّل النطاقات وتكاليف، فيقوم بها المستخدم بشكل منفصل).
+ما يلي هو أتمتة محلية (تعادل "إضافة موقع" في KUSANAGI) لتوفير إعدادات
+بروكسي عكسي مع تسريع، بسهولة وحسب الحزمة التقنية، لنطاق/نطاق فرعي تم
+الحصول عليه مسبقًا.
 
 ```bash
-# 1. ドメイン+IP+バックエンドから vhost(Nginx/Apache、HTTP→HTTPSリダイレクト込み)を生成
-scripts/gen-vhost.sh aruaru.example.com 203.0.113.10 127.0.0.1:4000
-# 別用途のサブドメインも同様に(UPSTREAM/WEBROOTを変えるだけ)
-scripts/gen-vhost.sh tool.example.com 203.0.113.10 127.0.0.1:9000 /var/www/tool
+# aruaru-web نفسها (موقع ثابت)
+scripts/gen-vhost.sh --stack=static aruaru.example.com 203.0.113.10
 
-# 2. 生成された設定ファイルを配置してリロード(deploy/generated/ 以下、.gitignore対象)
+# بروكسي عكسي عام لـ aruaru-db وopen-web-server وopen-raid-z أو أي خادم خلفي آخر
+scripts/gen-vhost.sh --stack=proxy tool.example.com 203.0.113.10 127.0.0.1:9000
 
-# 3. TLS証明書を取得(Let's Encrypt / certbot)
+# ووردبريس (حدد مقبس/عنوان PHP-FPM)
+scripts/gen-vhost.sh --stack=wordpress blog.example.com 203.0.113.10 \
+  unix:/run/php/php8.3-fpm.sock /var/www/blog
+
+# Laravel (حدد مجلد public بوضوح)
+scripts/gen-vhost.sh --stack=laravel app.example.com 203.0.113.10 \
+  unix:/run/php/php8.3-fpm.sock /var/www/app/public
+
+# FastAPI (بروكسي عكسي إلى خادم ASGI، يدعم WebSocket/البث المتدفق)
+scripts/gen-vhost.sh --stack=fastapi api.example.com 203.0.113.10 127.0.0.1:8000
+```
+
+بعد وضع ملفات الإعداد المُولَّدة (تحت `deploy/generated/`، وهي ضمن
+`.gitignore`) في مجلد إعدادات Nginx/Apache وإعادة تحميله، احصل على الشهادة:
+
+```bash
 scripts/setup-tls.sh aruaru.example.com admin@example.com /var/www/aruaru.example.com
 
-# 4. 自動更新(1日2回)+ 自動監視(1日1回、失効間近を検知)を有効化
+# تفعيل التحديث التلقائي (مرتين يوميًا) + المراقبة التلقائية (مرة يوميًا، لاكتشاف اقتراب انتهاء الصلاحية)
 sudo deploy/systemd/install-systemd-units.sh
 ```
 
-يمكن التحقق يدوياً في أي وقت من تواريخ انتهاء صلاحية شهادات جميع النطاقات
-المسجَّلة عبر `scripts/check-all-tls.sh`. كما يُنصح بتسجيل جهات الاتصال
-نفسها في تبويب "إدارة المواقع" بواجهة aruaru-web الرسومية، لكي تتطابق مع
-جهات الاتصال التي يتم التبديل بينها من المتصفح.
+يمكن التحقق يدويًا في أي وقت من تواريخ انتهاء صلاحية شهادات جميع النطاقات
+المسجلة عبر `scripts/check-all-tls.sh`. إذا سجّلت الوجهات نفسها في شاشة
+"إدارة المواقع" ضمن واجهة aruaru-web الرسومية، يمكنك عرضها واختبار الاتصال
+بها من المتصفح.
 
-## التحقق من عمل التطبيق (تم تنفيذه في هذا المسار)
+## التحقق من العمل (تم إجراؤه في هذا المسار)
 
-- نجاح كل من `cargo check --target wasm32-unknown-unknown` و
+- نجح كل من `cargo check --target wasm32-unknown-unknown` و
   `cargo build --target wasm32-unknown-unknown` (بدون أي تحذيرات).
 - تم توليد `pkg/aruaru_web.js` / `pkg/aruaru_web_bg.wasm` عبر
-  `wasm-bindgen --target web`، وتحميل `index.html` في متصفح حقيقي (Chromium
-  عبر Playwright)، والتحقق فعلياً من خلال التفاعل المباشر مع ما يلي: التبديل
-  بين التبويبات، تنفيذ SQL ← عرض البيانات الاحتياطية دون اتصال، تسجيل
-  الاستعلامات في السجلّ وإعادة تحميلها وظهور تلميح عند التحويم، اختصار
-  Ctrl+Enter، تصدير CSV (مع إطلاق تنزيل فعلي)، تجميع السجلّ، وفي تبويب إدارة
-  المواقع: عرض المواقع المسجَّلة، إضافة موقع جديد، رفض إدخال منفذ غير صالح،
-  زر اختبار الاتصال، تصدير/استيراد JSON (تم التحقق من نجاح العملية ذهاباً
-  وإياباً)، ومربع حوار تأكيد الحذف (كلا الخيارين: الإلغاء والتنفيذ). لا توجد
-  أي أخطاء JavaScript في وحدة التحكم (console) سوى سجلات فشل الاتصال
-  المقصودة.
-- تم تثبيت Nginx 1.24 (الإصدار المعتمد في Ubuntu 24.04) وApache 2.4 وcertbot
-  فعلياً، وتشغيل مخرجات `scripts/gen-vhost.sh` باستخدام شهادة موقّعة ذاتياً
-  والتحقق عبر `curl` (إعادة التوجيه من HTTP إلى HTTPS، مسار تحدي ACME،
-  والوكيل العكسي (reverse proxy) نحو `/graphql`)، وتشغيل `scripts/check-tls.sh`
-  على خادم HTTPS فعلي والتأكد من الحالات الثلاث WARN/healthy/ERROR، والتحقق
-  من `deploy/systemd/*` عبر `systemd-analyze verify` (بدون أي أخطاء). خلال
-  هذه العملية تم اكتشاف وإصلاح خطأ فعلي في قالب vhost الخاص بـ Nginx (كانت
-  `http2 on;` تسبب خطأ نحوياً في Nginx 1.24). أما الحصول الفعلي على شهادة
-  Let's Encrypt عبر certbot (مصادقة ACME) فلم يُتحقق منه بسبب عدم توفر نطاق
-  عام (public domain) وعدم توافق إصدارات Python ABI في بيئة الاختبار
-  (للتفاصيل انظر CLAUDE.md).
+  `wasm-bindgen --target web`، وتم تحميل `index.html` في متصفح حقيقي
+  (Chromium، عبر Playwright)، وتم التحقق فعليًا من خلال التفاعل معه: عرض
+  المواقع المسجلة في شاشة إدارة المواقع، وإضافة موقع جديد، ورفض إدخال منفذ
+  غير صالح، وزر اختبار الاتصال (نجح حتى في التحقق من الوصول إلى خادم HTTP
+  فعليًا قيد التشغيل)، وحوار تأكيد الحذف (كلاً من الإلغاء والتنفيذ)، وتصدير
+  JSON. لا توجد أي أخطاء JavaScript في وحدة التحكم (console).
+- تم تثبيت Nginx 1.24 (القياسي في Ubuntu 24.04) وApache 2.4 فعليًا، وتم
+  التحقق من صحة الصياغة لنواتج `gen-vhost.sh` لجميع الحزم التقنية الخمس
+  (static/proxy/wordpress/laravel/fastapi) باستخدام شهادة موقعة ذاتيًا عبر
+  كل من `nginx -t` و`apache2ctl configtest`، وتم تشغيل حزمتي static/proxy
+  فعليًا والتحقق من عملهما عبر `curl` (إعادة التوجيه من HTTP إلى HTTPS،
+  والبث الثابت، واستجابة 502 عبر البروكسي العكسي).
+- لم يتم التحقق من الإصدار الفعلي لشهادة Let's Encrypt عبر certbot (مصادقة
+  ACME)، ولا من عمل `scripts/deploy-vps.ps1` في بيئة VPS فعلية، لعدم توفر
+  نطاق عام أو VPS فعلي أو بيئة Windows في هذه الجلسة (راجع CLAUDE.md
+  للتفاصيل).
 
 ## البنية
 
 ```text
 aruaru-web/
-├── Cargo.toml            # crate-type = ["cdylib", "rlib"]、wasm-bindgen/web-sys依存
+├── Cargo.toml            # crate-type = ["cdylib", "rlib"]، يعتمد على wasm-bindgen/web-sys
 ├── src/
-│   ├── lib.rs             # エントリポイント・タブ切り替え・イベント配線
-│   ├── dom.rs             # DOM操作の共通ヘルパー(ファイルダウンロード等)
-│   ├── graphql.rs         # /graphql への fetch呼び出し
-│   ├── render.rs          # SQL結果・レジストリ集計のレンダリング、CSV出力
-│   ├── profiles.rs        # サイト管理(接続プロファイル、localStorage保存、JSON入出力)
-│   ├── history.rs         # SQLクエリ履歴(直近10件、localStorage保存)
-│   └── shell.rs           # HTMLシェル(タブ・フォーム)
-├── index.html             # pkg/ を読み込むローダー + CSS
-├── pkg/                   # wasm-bindgen生成物(.gitignore対象、ビルドで再生成)
+│   ├── lib.rs             # نقطة الدخول وربط الأحداث
+│   ├── dom.rs             # مساعدات مشتركة للتعامل مع DOM (تنزيل الملفات وغيرها)
+│   ├── profiles.rs        # إدارة المواقع (ملفات تعريف الاتصال، الحفظ في localStorage، اختبار الاتصال، استيراد/تصدير JSON)
+│   └── shell.rs           # هيكل HTML (shell)
+├── index.html             # محمّل (loader) يقوم بتحميل pkg/ + CSS
+├── pkg/                   # نواتج wasm-bindgen (ضمن .gitignore، تُعاد توليدها عند البناء)
 ├── scripts/
-│   ├── serve.sh            # 任意のIPアドレスから配信する開発サーバー起動
-│   ├── gen-vhost.sh         # ドメイン/IPからNginx・Apache vhostを生成
-│   ├── setup-tls.sh         # Let's Encrypt証明書の取得
-│   ├── check-tls.sh         # 1ドメインの証明書有効期限チェック
-│   └── check-all-tls.sh     # 登録済み全ドメインの有効期限を一括チェック
+│   ├── serve.sh            # تشغيل خادم تطوير يبث من أي عنوان IP
+│   ├── deploy-vps.ps1       # بناء ورفع وتشغيل على VPS من Windows PowerShell
+│   ├── gen-vhost.sh         # توليد إعدادات vhost لـ Nginx وApache من النطاق/IP/الحزمة التقنية
+│   ├── setup-tls.sh         # الحصول على شهادة Let's Encrypt
+│   ├── check-tls.sh         # التحقق من تاريخ انتهاء شهادة نطاق واحد
+│   └── check-all-tls.sh     # التحقق الجماعي من تواريخ انتهاء جميع النطاقات المسجلة
 ├── deploy/
-│   ├── nginx/vhost.conf.template
-│   ├── apache/vhost.conf.template
-│   ├── systemd/             # 自動更新(renew)・自動監視(monitor)タイマー一式
-│   └── generated/           # gen-vhost.shの出力(.gitignore対象)
+│   ├── nginx/vhost-{static,proxy,wordpress,laravel,fastapi}.conf.template
+│   ├── apache/vhost-{static,proxy,wordpress,laravel,fastapi}.conf.template
+│   ├── systemd/             # مجموعة كاملة من المؤقتات للتحديث التلقائي (renew) والمراقبة التلقائية (monitor)
+│   └── generated/           # مخرجات gen-vhost.sh (ضمن .gitignore)
 └── CLAUDE.md
 ```
 
 ## المشاريع ذات الصلة
 
-- **aruaru-db** (الجهة التي تتصل بها هذه الواجهة): https://github.com/aon-co-jp/aruaru-db
+نظرًا لأن هذا المستودع أداة عامة للنشر والتشغيل لا تعتمد على قاعدة بيانات
+معينة، **يمكن استخدامه جنبًا إلى جنب** مع مشاريع أخرى مثل التالية (يمكن
+تسجيلها في شاشة "إدارة المواقع" أو استخدامها كوجهة للبروكسي العكسي عبر
+`--stack=proxy`. لا يتدخل هذا المستودع في محتوى أي من هذه المستودعات):
+
+- **aruaru-db**: https://github.com/aon-co-jp/aruaru-db
 - **open-runo**: https://github.com/aon-co-jp/open-runo
 - **open-web-server**: https://github.com/aon-co-jp/open-web-server
 - **poem-cosmo-tauri**: https://github.com/aon-co-jp/poem-cosmo-tauri
-- **open-raid-z** (المرجع الرسمي لقواعد التطوير): https://github.com/aon-co-jp/open-raid-z
+- **open-raid-z** (المرجع الأساسي لقواعد التطوير): https://github.com/aon-co-jp/open-raid-z
 - **rs-to-readme**: https://github.com/aon-co-jp/rs-to-readme
 
 ## License
