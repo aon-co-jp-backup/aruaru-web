@@ -1,3 +1,5 @@
+> Latest translations / 翻訳の最新版: [0-LATEST-TRANSLATIONS.md](0-LATEST-TRANSLATIONS.md)
+
 # aruaru-web
 
 **aruaru-db 用の最小限の Web UI(Rust → WebAssembly、フレームワーク不使用)**
